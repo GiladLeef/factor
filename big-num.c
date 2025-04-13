@@ -522,29 +522,7 @@ __attribute__((unused)) static void cint_pow_mod(cint_sheet *sheet, const cint *
 }
 
 static void cint_gcd(cint_sheet *sheet, const cint *lhs, const cint *rhs, cint *gcd) {
-	// the basic GCD algorithm, by frontal divisions.
-	if (rhs->mem == rhs->end)
-		cint_dup(gcd, lhs), gcd->nat = 1;
-	else {
-		cint *A = h_cint_tmp(sheet, 2, lhs),
-				*B = h_cint_tmp(sheet, 3, lhs),
-				*C = h_cint_tmp(sheet, 4, lhs),
-				*TMP, *RES = gcd;
-		cint_dup(gcd, lhs);
-		cint_dup(A, rhs);
-		gcd->nat = A->nat = 1;
-		for (; A->mem != A->end;) {
-			cint_div(sheet, gcd, A, B, C);
-			TMP = gcd, gcd = A, A = C, C = TMP;
-		}
-		gcd->nat = 1;
-		if (RES != gcd) cint_dup(RES, gcd);
-	}
-
-}
-
-__attribute__((unused)) static void cint_binary_gcd(cint_sheet *sheet, const cint *lhs, const cint *rhs, cint *gcd) {
-	// a binary GCD algorithm.
+	// the binary GCD algorithm.
 	if (lhs->mem == lhs->end) cint_dup(gcd, rhs);
 	else if (rhs->mem == rhs->end) cint_dup(gcd, lhs);
 	else {
