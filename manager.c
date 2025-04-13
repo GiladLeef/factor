@@ -11,7 +11,7 @@ void print_help(const char *path) {
 	puts("  -t, --timeout <SECONDS>      Set a timeout in seconds to interrupt the Quadratic Sieve.");
 	puts("  -r, --rand-seed <NUMBER>     Use another set of random numbers that depend on <NUMBER>, 0 for the Unix timestamp.");
 	puts("  -v, --verbose <VALUE>        Between 0 and 4, displays more or less information.");
-	printf("  -f, --force                  Override default limits (8191 digits for numbers and %u-bit for the Quadratic Sieve).\n", DEFAULT_BIT_LIMIT_QS);
+	puts("  -f, --force                  Override default limits (8191 digits for numbers).");
 	puts("  -h, --help                   Show this help message and exit.\n");
 	puts("OUTPUT FORMATS:");
 	puts("  -j, --output-json            Format the results in JSON.");
@@ -197,7 +197,7 @@ void generate_input_file(state *state) {
 		uint64_t seed = state->params.rand.seed;
 		qs_md *g = state->params.demand, min = g[0], max = g[1], count = g[2], tmp, i;
 		if (min == -1) // No params specified.
-			min = 6, max = DEFAULT_BIT_LIMIT_QS ;
+			min = 6, max = 256;
 		assert(!(min >> 12) && !(max >> 12));
 		min = min < 6 ? 6 : 1300 < min ? 1300 : min;
 		if (max) {

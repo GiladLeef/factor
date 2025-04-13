@@ -364,10 +364,6 @@ static uint64_t *lanczos_block_worker(qs_sheet *);
 static void lanczos_reduce_matrix(qs_sheet *);
 static uint64_t *block_lanczos(qs_sheet *);
 
-// Beyond this limit, the "--force" option is required to run a Quadratic Sieve.
-
-#define DEFAULT_BIT_LIMIT_QS 220
-
 // Verbose level 0: just factorization, no other messages (default when there is no terminal).
 // Verbose level 1: also show task progress in percentage (default when there is a terminal).
 // Verbose level 2: also displays final status and duration.

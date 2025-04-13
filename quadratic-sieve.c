@@ -8,7 +8,7 @@ int factorization_quadratic_sieve(state * state, int bits) {
 	// - maintain the value of N consistent with the removed factors
 	// - return a non-zero value if the factorization has progressed
 
-	if (bits < 65 || (DEFAULT_BIT_LIMIT_QS < bits && !state->params.force))
+	if (bits < 65)
 		return 0; // For every additional 10 bits, the factorization duration roughly doubles.
 
 	qs_sheet qs = {0};
@@ -58,7 +58,7 @@ int inner_continuation_condition(qs_sheet *qs) {
 	if (pct != qs->time.prev_pct) {
 		if (qs->state->params.tty && qs->state->params.verbose)
 			display_progress("Quadratic Sieve", pct); // progress isn't linear.
-		else if (DEFAULT_BIT_LIMIT_QS < qs->n_bits && (qs_sm)qs->time.prev_pct != (qs_sm)pct)
+		else if ((qs_sm)qs->time.prev_pct != (qs_sm)pct)
 			DEBUG_LEVEL_4("%s", answer && !(qs->time.prev_pct < 50. && 50. <= pct) ? "." : ".\n");
 		qs->time.prev_pct = pct;
 	}
