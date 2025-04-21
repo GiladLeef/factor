@@ -1083,5 +1083,3 @@ int finalization_part_2(qs_sheet *qs) {
 
 	return res ;
 }
-
-// Compiling with "gcc -Wall -pedantic -O2 -std=c99 main.c -o factor" can speed up by a factor 2 or 3.
