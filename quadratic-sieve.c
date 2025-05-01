@@ -12,13 +12,13 @@ int factorization_quadratic_sieve(state * state, int bits) {
 		return 0; // For every additional 10 bits, the factorization duration roughly doubles.
 
 	qs_sheet qs = {0};
-	preparation_part_1(&qs, state, bits);
-	preparation_part_2(&qs);
-	preparation_part_3(&qs);
+	qs_initialize_state(&qs, state, bits);
+	qs_adjust_input_size(&qs);
+	qs_select_multiplier(&qs);
 	qs_parametrize(&qs);
-	preparation_part_4(&qs);
-	preparation_part_5(&qs);
-	preparation_part_6(&qs);
+	qs_allocate_memory(&qs);
+	qs_generate_factor_base(&qs);
+	qs_setup_polynomial_parameters(&qs);
 	do {
 		do {
 			// Keep randomly trying various polynomials.
@@ -36,9 +36,9 @@ int factorization_quadratic_sieve(state * state, int bits) {
 			}
 		} while (inner_continuation_condition(&qs));
 		// Analyzes all observations made by the algorithm.
-		finalization_part_1(&qs, block_lanczos(&qs));
+		qs_factorize_using_null_vectors(&qs, block_lanczos(&qs));
 	} while (outer_continuation_condition(&qs));
-	const int res = finalization_part_2(&qs);
+	const int res = qs_process_remaining_factors(&qs);
 	free(qs.mem.base);
 	return res;
 }
@@ -168,7 +168,7 @@ qs_sm linear_param_resolution(const double v[][2], const qs_sm point) {
 }
 
 // Quadratic sieve source (algorithm)
-void preparation_part_1(qs_sheet *qs, state *state, int bits) {
+void qs_initialize_state(qs_sheet *qs, state *state, int bits) {
 	// initializing (until kN is computed) with manager resources.
 	qs->state = state;
 	DEBUG_LEVEL_4("\nQuadratic Sieve on %s.\n", simple_cint_string(state, &state->session.num));
@@ -182,7 +182,7 @@ void preparation_part_1(qs_sheet *qs, state *state, int bits) {
 	}
 }
 
-void preparation_part_2(qs_sheet *qs) {
+void qs_adjust_input_size(qs_sheet *qs) {
 	// The algorithm is suitable for numbers larger than 115-bit,
 	// and may adjust kN by a prime number to reach this size.
 	cint * N = &qs->state->session.num, * kN = qs->state->session.tmp, *ADJUSTOR = kN + 1 ;
@@ -202,7 +202,7 @@ void preparation_part_2(qs_sheet *qs) {
 		qs->adjustor = 1, cint_dup(kN, N);
 }
 
-void preparation_part_3(qs_sheet *qs) {
+void qs_select_multiplier(qs_sheet *qs) {
 	// Frequently select a small multiplier (under 8-bit) that will save time and memory.
 	// After it, the algorithm will factor kN instead of N, where k is a constant named "multiplier".
 	const qs_sm mul = (qs_sm) qs->state->params.qs_multiplier ;
@@ -214,9 +214,9 @@ void preparation_part_3(qs_sheet *qs) {
 		qs_sm best[total_best];
 		for (int i = qs->state->params.verbose < 2; i < 2; ++i) {
 			if (i)
-				preparation_part_3_default_proposition(qs, best, total_best);
+				qs_score_default_multipliers(qs, best, total_best);
 			else
-				preparation_part_3_alternative_proposition(qs, best, total_best);
+				qs_score_alternative_multipliers(qs, best, total_best);
 			DEBUG_LEVEL_4("%s", "Suggested multipliers are [");
 			for (size_t j = 0; j < total_best - 1; ++j)
 				DEBUG_LEVEL_4("%u, ", best[j]);
@@ -233,7 +233,7 @@ void preparation_part_3(qs_sheet *qs) {
 	}
 }
 
-void preparation_part_3_default_proposition(qs_sheet *qs, qs_sm *caller_res, const size_t caller_res_len) {
+void qs_score_default_multipliers(qs_sheet *qs, qs_sm *caller_res, const size_t caller_res_len) {
 	// Choose a multiplier that make the input more favorable for smoothness
 	// over the future factor base, and lead to faster relation gathering.
 	struct {
@@ -279,7 +279,7 @@ void preparation_part_3_default_proposition(qs_sheet *qs, qs_sm *caller_res, con
 		caller_res[i] = res[i].mul ;
 }
 
-void preparation_part_3_alternative_proposition(qs_sheet *qs, qs_sm *caller_res, const size_t caller_res_len) {
+void qs_score_alternative_multipliers(qs_sheet *qs, qs_sm *caller_res, const size_t caller_res_len) {
 	// Choose a multiplier that make the input more favorable for smoothness
 	// over the future factor base, and lead to faster relation gathering.
 	struct {
@@ -326,7 +326,7 @@ void preparation_part_3_alternative_proposition(qs_sheet *qs, qs_sm *caller_res,
 		caller_res[i] = res[i].mul ;
 }
 
-void preparation_part_4(qs_sheet *qs) {
+void qs_allocate_memory(qs_sheet *qs) {
 	void *mem;
 	mem = qs->mem.base = calloc(1, qs->mem.bytes_allocated);
 	assert(mem);
@@ -424,7 +424,7 @@ void preparation_part_4(qs_sheet *qs) {
 	DEBUG_LEVEL_4("Allocated %u MB of memory with a %u KB structure.\n", qs->mem.bytes_allocated >> 20, (unsigned)((char*)qs->mem.now - (char*)qs->mem.base) >> 10);
 }
 
-void preparation_part_5(qs_sheet *qs) {
+void qs_generate_factor_base(qs_sheet *qs) {
 	// Prepare the factor base (a set of small prime numbers used to find smooth numbers).
 	static const double inv_ln_2 = 1.4426950408889634;
 	cint *A = qs->vars.TEMP, *B = A + 1, *C = A + 2;
@@ -456,7 +456,7 @@ void preparation_part_5(qs_sheet *qs) {
 	DEBUG_LEVEL_4("The factor base of %u suitable primes ends with %u.\n", qs->base.length, qs->base.largest);
 }
 
-void preparation_part_6(qs_sheet *qs) {
+void qs_setup_polynomial_parameters(qs_sheet *qs) {
 	// completes the configuration by the algorithm itself.
 	// computes D : a template (optimal value of hypercube) for the A polynomial coefficient.
 	qs_sm i, min, span;
@@ -1008,7 +1008,7 @@ void register_partial_relation(qs_sheet * qs, const cint * KEY, const cint * VAL
 	}
 }
 
-void finalization_part_1(qs_sheet * qs, const uint64_t * restrict const lanczos_answer) {
+void qs_factorize_using_null_vectors(qs_sheet * qs, const uint64_t * restrict const lanczos_answer) {
 	// Block Lanczos linear algebra answer is simply "mask followed by null_rows", with read-only.
 	if (*lanczos_answer == 0)
 		return;
@@ -1047,7 +1047,7 @@ void finalization_part_1(qs_sheet * qs, const uint64_t * restrict const lanczos_
 		}
 }
 
-int finalization_part_2(qs_sheet *qs) {
+int qs_process_remaining_factors(qs_sheet *qs) {
 	if (qs->n_bits != 1 && qs->divisors.length) {
 		// In rare cases N must be partially factored.
 		// Registers a divisor encountered by the algorithm in the manager routine.
