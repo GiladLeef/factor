@@ -11,6 +11,7 @@
 #include <sys/time.h>
 
 // Quadratic sieve integers.
+typedef uint8_t uint8; // tiny size, 8 bits unsigned
 typedef uint32_t uint32; // small size, like a factor base prime number (32-bit)
 typedef uint64_t uint64; // medium size, like a factor base prime number squared (64-bit)
 typedef int64_t int64; // signed type to perform intermediates computations
@@ -170,9 +171,9 @@ typedef struct {
 	uint32 n_bits;
 	uint32 kn_bits;
 	struct {
-		uint8_t **positions[2];
-		uint8_t *sieve;
-		uint8_t *flags;
+		uint8 **positions[2];
+		uint8 *sieve;
+		uint8 *flags;
 		uint32 length;
 		uint32 length_half;
 		uint32 cache_size;

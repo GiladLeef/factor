@@ -664,7 +664,7 @@ void iteration_part_7(qs_sheet * qs, const uint32 gray_addi, const uint32 * rest
 	// Sieve for larger prime numbers.
 	memset(qs->m.sieve, 0, qs->m.length * sizeof(*qs->m.sieve));
 	memset(qs->m.flags, 0, qs->base.length * sizeof(*qs->m.flags));
-	uint8_t * restrict end = qs->m.sieve + qs->m.length, *p_0, *p_1;
+	uint8 * restrict end = qs->m.sieve + qs->m.length, *p_0, *p_1;
 	for(uint32 i = qs->iterative_list[3], j = qs->iterative_list[4]; i < j; ++i) {
 		const uint32 prime = qs->base.data[i].num, size = qs->base.data[i].size, co = gray_addi ? prime - corr[i] : corr[i];
 		qs->base.data[i].root[0] += co; if (qs->base.data[i].root[0] >= prime) qs->base.data[i].root[0] -= prime;
@@ -687,8 +687,8 @@ void iteration_part_7(qs_sheet * qs, const uint32 gray_addi, const uint32 * rest
 void iteration_part_8(qs_sheet * qs, const uint32 gray_addi, const uint32 *  corr) {
 	// Sieving means taking an interval [−M/2, +M/2] and determining for
 	// which X in [−M/2, +M/2] a given prime number divides AX^2 + 2BX + C.
-	uint8_t * chunk_begin = qs->m.sieve, *chunk_end = chunk_begin;
-	uint8_t * sieve_end = chunk_begin + qs->m.length ;
+	uint8 * chunk_begin = qs->m.sieve, *chunk_end = chunk_begin;
+	uint8 * sieve_end = chunk_begin + qs->m.length ;
 	uint32 *buffer = qs->buffer[0], walk_idx, * walk = buffer;
 	// Since the previous function, the check is performed for the prime numbers of the factor base.
 	for(uint32 i = 0; i < qs->iterative_list[3]; ++i)
@@ -706,9 +706,9 @@ void iteration_part_8(qs_sheet * qs, const uint32 gray_addi, const uint32 *  cor
 		chunk_end = chunk_end + qs->m.cache_size < sieve_end ? chunk_end + qs->m.cache_size : sieve_end;
 		do{
 			const uint32 size = qs->base.data[*walk].size, prime = qs->base.data[*walk].num, times = 4 >> (*walk > qs->iterative_list[2]) ;
-			uint8_t ** const p_0 = qs->m.positions[0] + *walk, ** const p_1 = qs->m.positions[1] + *walk;
+			uint8 ** const p_0 = qs->m.positions[0] + *walk, ** const p_1 = qs->m.positions[1] + *walk;
 			const int64 diff = *p_1 - *p_0 ;
-			for(const uint8_t * const bound = chunk_end - prime * times; bound > *p_0;)
+			for(const uint8 * const bound = chunk_end - prime * times; bound > *p_0;)
 				for(uint32 i = 0; i < times; ++i)
 					**p_0 += size, *(*p_0 + diff) += size, *p_0 += prime;
 			for(; *p_0 < chunk_end && *p_0 + diff < chunk_end;)
@@ -843,7 +843,7 @@ void register_relations(qs_sheet * qs, const cint * A, const cint * B, const cin
 						*pen = (uint32) cint_remove(qs->sheet, V, TMP);
 						if (*pen) removed_bits += *pen++ * qs->base.data[idx].size; else --pen;
 					}
-				for (const uint8_t mask = 1 << (m_idx & 7); idx < qs->base.length && removed_bits < target_bits; ++idx)
+				for (const uint8 mask = 1 << (m_idx & 7); idx < qs->base.length && removed_bits < target_bits; ++idx)
 					if (qs->m.flags[idx] & mask)
 						if (mod = m_idx % qs->base.data[idx].num, mod == qs->base.data[idx].root[0] || mod == qs->base.data[idx].root[1]) {
 							intToCint(TMP, qs->base.data[idx].num);
