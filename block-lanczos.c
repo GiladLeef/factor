@@ -223,7 +223,7 @@ uint64_t *lanczos_block_worker(qs_sheet *qs) {
 	dim_1 = 64;
 	mask_1 = (uint64_t) -1;
 	for (i = 0; i < qs->relations.length.now; ++i)
-		md[1][i] = xor_random(qs->seed);
+		md[1][i] = xorRandom(qs->seed);
 	memcpy(md[0], md[1], v_size * sizeof(uint64_t));
 	lanczos_mul_MxN_Nx64(qs, md[1], v_size, xl[1]);
 	lanczos_mul_trans_MxN_Nx64(qs, xl[1], md[1]);

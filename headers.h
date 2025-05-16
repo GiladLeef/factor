@@ -284,28 +284,28 @@ static int primeCheck(state *, int);
 static int giveUp(state *, int);
 static int factor(state *);
 static int validate_input_file(state *);
-static size_t prepare_file_descriptors(state *);
+static size_t prepareFileDescriptors(state *);
 static int validate_string_number(const char *, state *);
 static void output_csv(state *, int, int, int);
 static void output_json(state *, int, int, int);
 static void output_default(state *, int, int, int);
 static void output(state *, int);
-static void prepare_sessions(state *);
-static void erase_session(state *);
-static void clear_sessions(state *);
-static void process_single(state *);
-static void process_multi(int, const char **, state *);
+static void prepareSessions(state *);
+static void eraseSession(state *);
+static void clearSessions(state *);
+static void processSingle(state *);
+static void processMulti(int, const char **, state *);
 
 // Math functions and system utilities.
-static inline uint64 xor_random(uint64 *);
-static inline uint64 xor_rand(uint64 *, uint64, uint64);
-static int is_prime_4669913(uint32);
-static double log_computation(double);
-static inline uint32 multiplication_modulo(uint64, uint64, uint32);
-static inline uint32 power_modulo(uint64, uint64, uint32);
-static int kronecker_symbol(uint32, uint32);
-static uint32 tonelli_shanks(uint32, uint32);
-static uint32 modular_inverse(uint32, uint32);
+static inline uint64 xorRandom(uint64 *);
+static inline uint64 xorRandint(uint64 *, uint64, uint64);
+static int isTinyPrime(uint32);
+static double log(double);
+static inline uint32 multiplicationModulo(uint64, uint64, uint32);
+static inline uint32 powerModulo(uint64, uint64, uint32);
+static int kroneckerSymbol(uint32, uint32);
+static uint32 tonelliShanks(uint32, uint32);
+static uint32 modularInverse(uint32, uint32);
 
 // 64-bit factorization.
 static int bitSize(uint64);

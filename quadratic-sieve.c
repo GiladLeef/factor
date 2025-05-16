@@ -132,7 +132,7 @@ void qs_parametrize(qs_sheet *qs) {
 
 	DEBUG_LEVEL_4("The iterative list contains %u, %u, %u and %u.\n", qs->iterative_list[1], qs->iterative_list[2], qs->iterative_list[3], qs->iterative_list[4]);
 
-	const uint64 last_prime_in_base = (uint64) (qs->base.length * 2.5 * log_computation(qs->base.length));
+	const uint64 last_prime_in_base = (uint64) (qs->base.length * 2.5 * log(qs->base.length));
 	qs->relations.too_large_prime = (tmp = qs->state->params.qs_large_prime) ? tmp : last_prime_in_base << 4;
 
 	if (155 < qs->kn_bits)
@@ -246,7 +246,7 @@ void qs_score_default_multipliers(qs_sheet *qs, uint32 *caller_res, const size_t
 	const size_t len = sizeof(res) / sizeof(*res) - 1;
 	for (uint32 i = 0; i < len ; ++i) {
 		res[i].mul = i + 1;
-		res[i].score = -0.5 * log_computation(res[i].mul);
+		res[i].score = -0.5 * log(res[i].mul);
 		switch (*N->mem * res[i].mul % 8) {
 			// Special case against 2, the first prime number.
 			case 3 : case 7 : res[i].score += 0.5 * log_2; break;
@@ -257,15 +257,15 @@ void qs_score_default_multipliers(qs_sheet *qs, uint32 *caller_res, const size_t
 
 	const int limit = qs->n_bits * qs->n_bits >> 5 ;
 	for (uint32 prime = 3; prime < limit; prime += 2)
-		if (is_prime_4669913(prime)) {
+		if (isTinyPrime(prime)) {
 			// Normal case against the odd primes.
 			intToCint(PRIME, prime);
 			cint_div(qs->sheet, N, PRIME, Q, R);
 			const uint32 n_mod_prime = (uint32) cintToInt(R);
-			const double intake = 2.0 / (prime - 1) * log_computation(prime);
-			const int kronecker = kronecker_symbol(n_mod_prime, prime);
+			const double intake = 2.0 / (prime - 1) * log(prime);
+			const int kronecker = kroneckerSymbol(n_mod_prime, prime);
 			for (uint32 i = 0; i < len; ++i)
-				if (kronecker * kronecker_symbol(res[i].mul, prime) == 1)
+				if (kronecker * kroneckerSymbol(res[i].mul, prime) == 1)
 					res[i].score += intake;
 		}
 
@@ -291,7 +291,7 @@ void qs_score_alternative_multipliers(qs_sheet *qs, uint32 *caller_res, const si
 	const double log_2 = 0.6931471805599453;
 	const size_t len = sizeof(res) / sizeof(*res) - 1;
 	for (uint32 i = 0; i < len; ++i) {
-		res[i].score = -0.5 * log_computation(res[i].mul);
+		res[i].score = -0.5 * log(res[i].mul);
 		switch (*N->mem * res[i].mul % 8) {
 			// Special case against 2, the first prime number.
 			case 3 : case 7 : res[i].score += 0.5 * log_2; break;
@@ -301,17 +301,17 @@ void qs_score_alternative_multipliers(qs_sheet *qs, uint32 *caller_res, const si
 	}
 
 	for (uint32 prime = 3; prime < 504; prime += 2)
-		if (is_prime_4669913(prime)) {
+		if (isTinyPrime(prime)) {
 			// Normal case against the odd primes.
 			intToCint(TMP, prime);
 			cint_div(qs->sheet, N, TMP, Q, R);
 			const uint32 n_mod_prime = (uint32) cintToInt(R);
-			const double intake = log_computation(prime) / (prime - 1);
+			const double intake = log(prime) / (prime - 1);
 			for (uint32 i = 0; i < len; ++i) {
 				const uint32 kn_mod_prime = n_mod_prime * res[i].mul % prime;
 				if (kn_mod_prime == 0)
 					res[i].score += intake;
-				else if (kronecker_symbol(kn_mod_prime, prime) == 1)
+				else if (kroneckerSymbol(kn_mod_prime, prime) == 1)
 					res[i].score += 2.0 * intake;
 			}
 		}
@@ -432,7 +432,7 @@ void qs_generate_factor_base(qs_sheet *qs) {
 
 	// the factor base contain the multiplier if different from 2.
 	if (qs->multiplier != 2)
-		qs->base.data[i].size = (uint32) (.35 + inv_ln_2 * log_computation(qs->base.data[i].num = qs->multiplier)), ++i;
+		qs->base.data[i].size = (uint32) (.35 + inv_ln_2 * log(qs->base.data[i].num = qs->multiplier)), ++i;
 
 	// then it contains the number 2.
 	qs->base.data[i].num = 2, qs->base.data[i].size = 1;
@@ -440,14 +440,14 @@ void qs_generate_factor_base(qs_sheet *qs) {
 
 	// then the prime numbers for which kN is a quadratic residue modulo.
 	for (prime = 3; i < qs->base.length; prime += 2)
-		if (is_prime_4669913(prime)) {
+		if (isTinyPrime(prime)) {
 			intToCint(A, prime);
 			cint_div(qs->sheet, &qs->constants.kN, A, B, C);
 			const uint32 kn_mod_prime = (uint32) cintToInt(C);
-			qs->base.data[i].sqrt_kN_mod_prime = tonelli_shanks(kn_mod_prime, prime);
+			qs->base.data[i].sqrt_kN_mod_prime = tonelliShanks(kn_mod_prime, prime);
 			if (qs->base.data[i].sqrt_kN_mod_prime) {
 				qs->base.data[i].num = prime;
-				qs->base.data[i].size = (uint32) (.35 + inv_ln_2 * log_computation(prime)), ++i;
+				qs->base.data[i].size = (uint32) (.35 + inv_ln_2 * log(prime)), ++i;
 			}
 		}
 	// 2.5 * (base size) * ln(base size) is close to the largest prime number in factor base.
@@ -519,8 +519,8 @@ void iteration_part_1(qs_sheet * qs, const cint * D, cint * A) {
 	// swap pointers so the last multiplication completes inside the A variable.
 	intToCint(A, 1);
 	for (a = 0, b = qs->poly.span.x_3; a < qs->s.values.subtract_one; ++a) {
-		if (a & 1) i = b / (i + qs->poly.span.x_1) - (uint32) xor_rand(qs->seed, 0, 9);
-		else i = qs->poly.span.x_2 + (uint32) xor_rand(qs->seed, 0, qs->poly.span.half);
+		if (a & 1) i = b / (i + qs->poly.span.x_1) - (uint32) xorRandint(qs->seed, 0, 9);
+		else i = qs->poly.span.x_2 + (uint32) xorRandint(qs->seed, 0, qs->poly.span.half);
 		for (j = 0; j < a; j = i == qs->s.data[j].prime_index ? ++i, 0 : j + 1);
 		qs->s.data[a].prime_index = i; // the selected divisor of A wasn't already present in the product.
 		intToCint(Y, qs->base.data[i].num);
@@ -559,7 +559,7 @@ void iteration_part_2(qs_sheet * qs, const cint * A, cint * B) {
 		cint_div(qs->sheet, A, PRIME, X, R), assert(R->mem == R->end); // div exact.
 		cint_div(qs->sheet, X, PRIME, Y, R);
 		qs->s.data[i].A_over_prime_mod_prime = (uint32) cintToInt(R);
-		uint64 x = modular_inverse(qs->s.data[i].A_over_prime_mod_prime, prime);
+		uint64 x = modularInverse(qs->s.data[i].A_over_prime_mod_prime, prime);
 		x = x * qs->base.data[qs->s.data[i].prime_index].sqrt_kN_mod_prime % prime;
 		intToCint(X, x > prime >> 1 ? prime - x : x);
 		cint_mul(A, X, Y);
@@ -580,7 +580,7 @@ void iteration_part_3(qs_sheet * qs, const cint * A, const cint * B) {
 		const uint32 a_mod_prime = (uint32) cintToInt(R) ;
 		cint_div(qs->sheet, B, PRIME, Q, R) ;
 		const uint32 b_mod_prime = (uint32) cintToInt(R) ;
-		const uint32 a_inv_double_value = modular_inverse(a_mod_prime, prime) << 1 ;
+		const uint32 a_inv_double_value = modularInverse(a_mod_prime, prime) << 1 ;
 		// Arithmetic shifts "<<" and ">>" performs multiplication or division by powers of two.
 		x = y = prime;
 		x += qs->base.data[i].sqrt_kN_mod_prime;
@@ -643,7 +643,7 @@ void iteration_part_5(qs_sheet *  qs, const cint * kN, const cint * B) {
 		}
 		//
 		int64 bezout = (rem_b % prime) * (int64) qs->s.data[a].A_over_prime_mod_prime ;
-		bezout = (int64) modular_inverse((uint32) (bezout % prime), (uint32) prime);
+		bezout = (int64) modularInverse((uint32) (bezout % prime), (uint32) prime);
 		//
 		s = (int64) qs->m.length_half - s * bezout ;
 		s %= prime ;
@@ -940,7 +940,7 @@ void register_partial_relation(qs_sheet * qs, const cint * KEY, const cint * VAL
 					return;
 				}
 			// so compute BEZOUT.
-			cint_modular_inverse(qs->sheet, VALUE, &qs->constants.kN, A);
+			cint_modularInverse(qs->sheet, VALUE, &qs->constants.kN, A);
 			if (A->mem == A->end) {
 				old->X = 0; // no solution to the linear congruence.
 				cint_gcd(qs->sheet, VALUE, &qs->constants.kN, &qs->vars.FACTOR);

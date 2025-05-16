@@ -47,7 +47,7 @@ int isPrime64bits(uint64 n) {
 
 uint64 pollardsRho(const uint64 n, uint64_t *seed) {
 	// Factorize N using the given seed to explore different sequences.
-	uint64 divisor = 1, a, b, c, i = 0, j = 1, x = 1, y = xor_rand(seed, 1, n - 1);
+	uint64 divisor = 1, a, b, c, i = 0, j = 1, x = 1, y = xorRandint(seed, 1, n - 1);
 	for (; divisor == 1; ++i) {
 		if (i == j) {
 			if (j >> 18) // Adjust the timeout with (j >> 18) for 20 ms .......... (j >> 17) for 10 ms.

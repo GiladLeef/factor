@@ -40,8 +40,8 @@ int main(int argc, const char *argv[]) {
 		printHelp(argv[0]); // Option --help or -h was found.
 	else if (state.code == 0 && *state.params.demand)
 		generateInputFile(&state); // Generate a factorization demand.
-	else if (state.code == 0 && prepare_file_descriptors(&state))
-		process_multi(argc, argv, &state); // Process the request(s).
+	else if (state.code == 0 && prepareFileDescriptors(&state))
+		processMulti(argc, argv, &state); // Process the request(s).
 	else
 		fprintf(stderr, "Use '--help' for more information about the software.\n");
 

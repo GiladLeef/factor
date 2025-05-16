@@ -161,9 +161,9 @@ void random(cint_sheet *sheet, uint64_t *seed, cint *nums, char *comment, const 
 		if (!cint_is_prime(sheet, P, -1, seed))
 			goto retry;
 		i = !i;
-		if (2 < remaining_factors && !xor_rand(seed, 0, 24)) {
+		if (2 < remaining_factors && !xorRandint(seed, 0, 24)) {
 			// Occasionally raise this prime number to a power.
-			int pow = (int) xor_rand(seed, 2, remaining_factors - 1);
+			int pow = (int) xorRandint(seed, 2, remaining_factors - 1);
 			remaining_factors += 1 - pow;
 			message += sprintf(message, " %s %c^%d", sym == 'A' ? "and" : "*", sym, pow);
 			++sym;
@@ -236,7 +236,7 @@ void generateInputFile(state *state) {
 		do {
 			// DEVELOPMENT : decrease 24 and 17 in the next line to test the trial division.
 			const int n_factors_max = (int)bits / (65.0 <= bits ? 24 : 34.0 <= bits ? 17 : 3);
-			const int n_factors = xor_rand(&seed, 2, xor_rand(&seed, 2, n_factors_max));
+			const int n_factors = xorRandint(&seed, 2, xorRandint(&seed, 2, n_factors_max));
 			random(sheet, &seed, nums, comment, n_factors, bits);
 			cint_to_string_buffer(nums, buf, 10);
 			fprintf(fp, "%-*s # %d bits with %d factors%s\n", max_len, buf, (int) bits, n_factors, comment);
@@ -383,7 +383,7 @@ int trialDivide(state *state, int stage, int bits) {
 	cint_reinit(a, 1);
 	uint32 trial = state->session.trial_start;
 	for (; trial < trial_upto; trial += 2)
-		if (is_prime_4669913(trial)) {
+		if (isTinyPrime(trial)) {
 			a->mem[0] = (h_cint_t) trial;
 			cint_div(sheet, n, a, b, c);
 			if (c->mem == c->end) {
@@ -413,7 +413,7 @@ int anyRootCheck(state *state, const cint *n, cint *root, cint *rem) {
 	cint_reinit(max, (int) state->session.trial_start - 2);
 	const int max_root = (int) cint_count_bits(n);
 	for (int nth = 2; nth < max_root; nth += 1 + (nth != 2))
-		if (is_prime_4669913((uint32)nth)) {
+		if (isTinyPrime((uint32)nth)) {
 			cint_nthRoot_remainder(sheet, n, nth, root, rem);
 			if (rem->mem == rem->end) {
 				res = nth;
@@ -566,7 +566,7 @@ int validate_input_file(state *state) {
 	return state->scale.max_digits != 0;
 }
 
-size_t prepare_file_descriptors(state *state) {
+size_t prepareFileDescriptors(state *state) {
 	if (state->params.output_file) {
 		state->out = fopen(state->params.output_file, "wb");
 		if (!state->out)
@@ -665,12 +665,12 @@ void output(state *state, int status) {
 	fflush(state->out);
 }
 
-void prepare_sessions(state *state) {
+void prepareSessions(state *state) {
 	// Prepare a session containing enough memory to handle the largest (in terms of digits) number.
 	state->scale.max_factors = 1;
 	state->scale.max_bits = cint_approx_bits_from_digits(state->scale.max_digits, 10);
 	for (int i = 3, bits = (int) state->scale.max_bits; 0 < bits; i += 2)
-		if (is_prime_4669913(i))
+		if (isTinyPrime(i))
 			for (int j = (++state->scale.max_factors, i); j >>= 1; --bits);
 	state->session.output_string = malloc(state->scale.max_bits + 32 - state->scale.max_bits % 16);
 	assert(state->session.output_string); // String buffer to store any number represented in any base.
@@ -692,7 +692,7 @@ void prepare_sessions(state *state) {
 	state->session.mem.now = state->session.res + state->scale.max_factors;
 }
 
-void erase_session(state *state) {
+void eraseSession(state *state) {
 	// Erase the session (clear variables, number, and results).
 	for (size_t i = 0; i < sizeof(state->session.tmp) / sizeof(*state->session.tmp); ++i)
 		if (state->session.tmp[i].mem != state->session.tmp[i].end)
@@ -702,7 +702,7 @@ void erase_session(state *state) {
 	state->session.mem.now = state->session.res + state->scale.max_factors;
 }
 
-void clear_sessions(state *state) {
+void clearSessions(state *state) {
 	// Free all memory, close all descriptors.
 	free(state->session.output_string);
 	free(state->session.tmp[0].mem);
@@ -715,7 +715,7 @@ void clear_sessions(state *state) {
 		fclose(state->out);
 }
 
-void process_single(state *state) {
+void processSingle(state *state) {
 	cint_reinit_by_string(&state->session.num, state->session.input_string, 10);
 	uint64_t seed = state->params.rand.seed ;
 	state->session.seed = &seed ; // Each number is factored with the seed.
@@ -723,11 +723,11 @@ void process_single(state *state) {
 	output(state, status);
 	state->duration_ms += state->session.duration_ms;
 	if (state->scale.row_idx != state->scale.total_rows)
-		erase_session(state); // Get ready for the next request.
+		eraseSession(state); // Get ready for the next request.
 }
 
-void process_multi(int argc, const char **argv, state *state) {
-	prepare_sessions(state);
+void processMulti(int argc, const char **argv, state *state) {
+	prepareSessions(state);
 	if (state->in) {
 		// Process request(s) incoming from a file.
 		const size_t buf_size = state->scale.max_digits + 4096;
@@ -737,7 +737,7 @@ void process_multi(int argc, const char **argv, state *state) {
 		while (fgets(s, buf_size, state->in))
 			if ((*s >= '1' && *s <= '9') || ((*s == '+' || *s == '-') && *(s + 1) >= '1' && *(s + 1) <= '9')) {
 				s[strspn(s, "+-0123456789")] = 0;
-				process_single(state);
+				processSingle(state);
 			}
 		free(s);
 	} else
@@ -745,10 +745,10 @@ void process_multi(int argc, const char **argv, state *state) {
 		for (int i = 1; i < argc; ++i)
 			if (argv[i]) {
 				state->session.input_string = argv[i];
-				process_single(state);
+				processSingle(state);
 			}
 	if (1 < state->params.verbose)
 		fprintf(stderr, "\n%s result%s %s in %.02f s.\n", state->code ? "[x] Maintenance reports that the" : "The", state->scale.row_idx == 1 ? " is" : "s are", state->code ? "correct but lacks accuracy" : "completely accurate and verified", (double) state->duration_ms * 0.001) ;
 	// Clear all memory used to process the requests.
-	clear_sessions(state);
+	clearSessions(state);
 }

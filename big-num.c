@@ -662,7 +662,7 @@ static void cint_random_bits(cint *num, size_t bits, uint64_t * seed) {
 	}
 }
 
-static void cint_modular_inverse(cint_sheet *sheet, const cint *lhs, const cint *rhs, cint *res) {
+static void cint_modularInverse(cint_sheet *sheet, const cint *lhs, const cint *rhs, cint *res) {
 	// original modular inverse algorithm, answer is also called "u1" in extended Euclidean algorithm context.
 	if (*rhs->mem > 1 || rhs->end > rhs->mem + 1) {
 		cint *a = h_cint_tmp(sheet, 2, rhs),
