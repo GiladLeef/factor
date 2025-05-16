@@ -3,28 +3,28 @@
 // The "worker" algorithm uses the Pollard Rho method when trial division isn't enough
 // to fully factor the number, and Miller-Rabin identifies that the number is not prime.
 
-int bitSize(u64 n) {
+int bitSize(uint64 n) {
 	int size = n != 0;
 	while (n >>= 1)
 		++size;
 	return size;
 }
 
-u64 mulMod(u64 a, u64 b, const u64 mod) {
-	u64 res = 0, c; // return (a * b) % mod, avoiding overflow errors while doing modular multiplication.
+uint64 mulMod(uint64 a, uint64 b, const uint64 mod) {
+	uint64 res = 0, c; // return (a * b) % mod, avoiding overflow errors while doing modular multiplication.
 	for (b %= mod; a; a & 1 ? b >= mod - res ? res -= mod : 0, res += b : 0, a >>= 1, (c = b) >= mod - b ? c -= mod : 0, b += c);
 	return res % mod;
 }
 
-u64 powMod(u64 n, u64 exp, const u64 mod) {
-	u64 res = 1; // return (n ^ exp) % mod.
+uint64 powMod(uint64 n, uint64 exp, const uint64 mod) {
+	uint64 res = 1; // return (n ^ exp) % mod.
 	for (n %= mod; exp; exp & 1 ? res = mulMod(res, n, mod) : 0, n = mulMod(n, n, mod), exp >>= 1);
 	return res;
 }
 
-int isPrime64bits(u64 n) {
+int isPrime64bits(uint64 n) {
 	// Perform a Miller-Rabin test, it should be a deterministic version.
-	static const u64 bases[] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37};
+	static const uint64 bases[] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37};
 	static const int n_bases = (int) sizeof(*bases);
 	for (int i = 0; i < n_bases; ++i)
 		if (n % bases[i] == 0)
@@ -34,7 +34,7 @@ int isPrime64bits(u64 n) {
 	// Depending on the size of the number, we don't need to test all the bases.
 	const int lim = n < 2152302898747 ? n < 25326001 ? n < 2047 ? 1 : n < 1373653 ? 2 : 3 : n < 3215031751 ? 4 : 5 : n < 341550071728321 ? n < 3474749660383 ? 6 : 7 : n < 3825123056546413051 ? 9 : 12;
 	int res = 1, a = 0;
-	u64 b, c;
+	uint64 b, c;
 	for (b = n - 1; ~b & 1; b >>= 1, ++a);
 	for (int i = 0; i < lim && res; ++i)
 		if (c = powMod(bases[i], b, n), c != 1) {
@@ -45,9 +45,9 @@ int isPrime64bits(u64 n) {
 	return res;
 }
 
-u64 pollardsRho(const u64 n, uint64_t *seed) {
+uint64 pollardsRho(const uint64 n, uint64_t *seed) {
 	// Factorize N using the given seed to explore different sequences.
-	u64 divisor = 1, a, b, c, i = 0, j = 1, x = 1, y = xor_rand(seed, 1, n - 1);
+	uint64 divisor = 1, a, b, c, i = 0, j = 1, x = 1, y = xor_rand(seed, 1, n - 1);
 	for (; divisor == 1; ++i) {
 		if (i == j) {
 			if (j >> 18) // Adjust the timeout with (j >> 18) for 20 ms .......... (j >> 17) for 10 ms.
@@ -64,23 +64,23 @@ u64 pollardsRho(const u64 n, uint64_t *seed) {
 	return divisor;
 }
 
-u64 nthRoot(const u64 n, const u64 nth) {
+uint64 nthRoot(const uint64 n, const uint64 nth) {
 	// Use an iterative approach for finding the nth-roots.
-	u64 a = n, b, c, r = nth ? n + (n > 1) : n == 1 ;
+	uint64 a = n, b, c, r = nth ? n + (n > 1) : n == 1 ;
 	for (; a < r; b = a + (nth - 1) * r, a = b / nth)
 		for (r = a, a = n, c = nth - 1; c && (a /= r); --c);
 	return r;
 }
 
-u64 squareExtraction(u64 *n, int *pow) {
-	u64 root = 1;
+uint64 squareExtraction(uint64 *n, int *pow) {
+	uint64 root = 1;
 	if (3 < *n)
 		while (root = nthRoot(*n, 2), *n == root * root)
 			*n = root, *pow <<= 1;
 	return 65522U * 65522U < *n ? 65522U : root + 1;
 }
 
-void rhoWorker(state *state, u64 n, fac64_row *rows) {
+void rhoWorker(state *state, uint64 n, fac64_row *rows) {
 	if (3 < n) {
 		int pow = 1;
 		if (~n & 1) {
@@ -94,9 +94,9 @@ void rhoWorker(state *state, u64 n, fac64_row *rows) {
 		}
 		if (8 < n) {
 			// The number is odd.
-			u64 limit = squareExtraction(&n, &pow);
+			uint64 limit = squareExtraction(&n, &pow);
 			// Ensure the number has no 16-bit factor by trial division.
-			for (u64 prime = 3; prime < limit; prime += 2)
+			for (uint64 prime = 3; prime < limit; prime += 2)
 				if (n % prime == 0) {
 					int p = 0;
 					do ++p, n /= prime;
@@ -109,7 +109,7 @@ void rhoWorker(state *state, u64 n, fac64_row *rows) {
 				fac64_row tasks[8]; // Stack-based approach for the remainder (greater than 16-bit).
 				tasks[i++] = (fac64_row) {n, pow};
 				do {
-					u64 x;
+					uint64 x;
 					n = tasks[--i].prime;
 					pow = tasks[i].power;
 					if (n == 1)

@@ -42,9 +42,9 @@ void printHelp(const char *path) {
 	puts("  1  At least one number among the results is not fully factored.\n");
 }
 
-qs_md getNum(const char *s) {
+uint64 getNum(const char *s) {
 	char *end = 0;
-	const qs_md res = strtoull(s + (*s == '-'), &end, 10);
+	const uint64 res = strtoull(s + (*s == '-'), &end, 10);
 	return end != s && !*end ? *s == '-' ? -res : res : 0;
 }
 
@@ -62,7 +62,7 @@ int read_key_and_3_values(const char **argv, state *state) {
         state->params.name_2[1] = n_2; \
         state->params.name_2[2] = n_3; \
     }
-	qs_md n_1, n_2, n_3;
+	uint64 n_1, n_2, n_3;
 	FILL(demand, d, demand)
 	else
 		return 0;
@@ -73,7 +73,7 @@ int read_key_and_3_values(const char **argv, state *state) {
 int read_key_and_2_values(const char **argv, state *state) {
 #define FETCH ((n_1 = getNum(val_1)) && (n_2 = getNum(val_2)))
 	const char *key = *argv, *val_1 = *(argv + 1), *val_2 = *(argv + 2);
-	qs_md n_1, n_2;
+	uint64 n_1, n_2;
 	if (cliParamMatch(key, "--demand", "-d") && FETCH)
 		state->params.demand[0] = n_1, state->params.demand[1] = n_2;
 	else
@@ -195,7 +195,7 @@ void generateInputFile(state *state) {
 	FILE *fp = fopen(path ? path : "demand.txt", "wb");
 	if (fp) {
 		uint64_t seed = state->params.rand.seed;
-		qs_md *g = state->params.demand, min = g[0], max = g[1], count = g[2], tmp, i;
+		uint64 *g = state->params.demand, min = g[0], max = g[1], count = g[2], tmp, i;
 		if (min == -1) // No params specified.
 			min = 6, max = 256;
 		assert(!(min >> 12) && !(max >> 12));
@@ -280,15 +280,15 @@ void dupCint(cint *A, const cint *B, void **mem) {
 	*mem = A->mem + A->size;
 }
 
-void intToCint(cint *num, qs_md value) {
+void intToCint(cint *num, uint64 value) {
 	// Pass the given 64-bit number into the given cint (positive only).
 	for (cint_erase(num); value; *num->end++ = (h_cint_t) (value & cint_mask), value >>= cint_exponent);
 }
 
-qs_md cintToInt(const cint *num) {
+uint64 cintToInt(const cint *num) {
 	// Return the value of a cint as a 64-bit integer (sign is ignored).
-	qs_md res = 0;
-	for (h_cint_t *ptr = num->end; ptr > num->mem; res = (qs_md) (res * cint_base + *--ptr));
+	uint64 res = 0;
+	for (h_cint_t *ptr = num->end; ptr > num->mem; res = (uint64) (res * cint_base + *--ptr));
 	return res;
 }
 
@@ -358,7 +358,7 @@ void manager_add_factor(state *state, const cint *num, int pow, int is_prime) {
 	//
 }
 
-void manager_add_simple_factor(state *state, qs_md num, int pow, int is_prime) {
+void manager_add_simple_factor(state *state, uint64 num, int pow, int is_prime) {
 	assert(0 < pow);
 	intToCint(state->session.tmp, num);
 	manager_add_factor(state, state->session.tmp, pow, is_prime);
@@ -366,7 +366,7 @@ void manager_add_simple_factor(state *state, qs_md num, int pow, int is_prime) {
 
 void factorPollardsRho(state *state) {
 	fac64_row res[16];
-	u64 num = cintToInt(&state->session.num);
+	uint64 num = cintToInt(&state->session.num);
 	rhoWorker(state, num, res);
 	for (fac64_row *r = res; (*r).power; ++r)
 		manager_add_simple_factor(state, (*r).prime, (*r).power, (*r).prime != 1);
@@ -376,12 +376,12 @@ void factorPollardsRho(state *state) {
 int trialDivide(state *state, int stage, int bits) {
 	assert(64 < bits);
 	const int calc = stage == 2 ? (1 << 20) - 23250 * bits + 127 * bits * bits : 4669914;
-	const qs_sm trial_upto = stage == 1 ? 524 : calc < 65522 ? 65522 : 4669914 < calc ? 4669914 : calc;
+	const uint32 trial_upto = stage == 1 ? 524 : calc < 65522 ? 65522 : 4669914 < calc ? 4669914 : calc;
 	cint *a = state->session.tmp, *b = a + 1, *c = a + 2, *tmp;
 	cint *n = &state->session.num;
 	cint_sheet *sheet = state->session.sheet;
 	cint_reinit(a, 1);
-	qs_sm trial = state->session.trial_start;
+	uint32 trial = state->session.trial_start;
 	for (; trial < trial_upto; trial += 2)
 		if (is_prime_4669913(trial)) {
 			a->mem[0] = (h_cint_t) trial;
@@ -413,7 +413,7 @@ int anyRootCheck(state *state, const cint *n, cint *root, cint *rem) {
 	cint_reinit(max, (int) state->session.trial_start - 2);
 	const int max_root = (int) cint_count_bits(n);
 	for (int nth = 2; nth < max_root; nth += 1 + (nth != 2))
-		if (is_prime_4669913((qs_sm)nth)) {
+		if (is_prime_4669913((uint32)nth)) {
 			cint_nthRoot_remainder(sheet, n, nth, root, rem);
 			if (rem->mem == rem->end) {
 				res = nth;

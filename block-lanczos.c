@@ -3,10 +3,10 @@
 
 // Kornél Lánczos (1893 - 1974) was a Hungarian-American and later Hungarian-Irish mathematician and physicist.
 
-void lanczos_mul_MxN_Nx64(const qs_sheet *qs, const uint64_t *X, const qs_sm max_size, uint64_t *Y) {
+void lanczos_mul_MxN_Nx64(const qs_sheet *qs, const uint64_t *X, const uint32 max_size, uint64_t *Y) {
 	assert(Y != X);
 	memset(Y, 0, max_size * sizeof(uint64_t));
-	for (qs_sm a = 0, b; a < qs->relations.length.now; ++a) {
+	for (uint32 a = 0, b; a < qs->relations.length.now; ++a) {
 		struct qs_relation *const rel = qs->relations.data[a];
 		for (b = 0; b < rel->Y.length; ++b)
 			Y[rel->Y.data[b]] ^= X[a];
@@ -15,7 +15,7 @@ void lanczos_mul_MxN_Nx64(const qs_sheet *qs, const uint64_t *X, const qs_sm max
 
 void lanczos_mul_trans_MxN_Nx64(const qs_sheet *qs, const uint64_t *X, uint64_t *Y) {
 	assert(Y != X);
-	for (qs_sm a = 0, b; a < qs->relations.length.now; ++a) {
+	for (uint32 a = 0, b; a < qs->relations.length.now; ++a) {
 		struct qs_relation *const rel = qs->relations.data[a];
 		for (Y[a] = 0, b = 0; b < rel->Y.length; ++b)
 			Y[a] ^= X[rel->Y.data[b]];
@@ -24,7 +24,7 @@ void lanczos_mul_trans_MxN_Nx64(const qs_sheet *qs, const uint64_t *X, uint64_t 
 
 void lanczos_mul_64xN_Nx64(const qs_sheet *qs, const uint64_t *X, const uint64_t *Y, uint64_t *Z, uint64_t *T) {
 	assert(X != Z && Y != Z);
-	qs_sm a, b, c, d;
+	uint32 a, b, c, d;
 	memset(Z, 0, 256 * 8 * sizeof(*Z));
 	memset(T, 0, 64 * sizeof(*T));
 	for (a = 0; a < qs->relations.length.now; ++a) {
@@ -112,7 +112,7 @@ uint64_t lanczos_find_non_singular_sub(const uint64_t *t, const uint64_t *last_s
 }
 
 void lanczos_mul_Nx64_64x64_acc(qs_sheet *qs, const uint64_t *X, const uint64_t *Y, uint64_t *Z, uint64_t *T) {
-	qs_sm a;
+	uint32 a;
 	uint64_t b, c, d, e;
 	for (b = 0; b < 8; Y += 8, Z += 256, ++b)
 		for (c = 0; c < 256; ++c)
@@ -135,7 +135,7 @@ void lanczos_mul_64x64_64x64(const uint64_t *X, const uint64_t *Y, uint64_t *Z) 
 }
 
 void lanczos_transpose_vector(qs_sheet *qs, const uint64_t *X, uint64_t **Y) {
-	qs_sm a; // Z will be zeroed automatically by the loop.
+	uint32 a; // Z will be zeroed automatically by the loop.
 	uint64_t b, c, d, *Z;
 	Z = memcpy(qs->mem.now, X, qs->relations.length.now * sizeof(*X));
 	for (a = 0; a < qs->relations.length.now; ++a)
@@ -145,7 +145,7 @@ void lanczos_transpose_vector(qs_sheet *qs, const uint64_t *X, uint64_t **Y) {
 
 void lanczos_combine_cols(qs_sheet *qs, uint64_t *x, uint64_t *v, uint64_t *ax, uint64_t *av) {
 	// Use Gaussian elimination on the columns of [ax | av] to find all linearly dependent columns.
-	qs_sm i, j, bit_pos, num_deps;
+	uint32 i, j, bit_pos, num_deps;
 	uint64_t k, col, col_words;
 	uint64_t mask, *mat_1[128], *mat_2[128], *tmp;
 	num_deps = 64 << (v && av);
@@ -208,10 +208,10 @@ void lanczos_build_array(qs_sheet *qs, uint64_t **target, const size_t quantity,
 }
 
 uint64_t *lanczos_block_worker(qs_sheet *qs) {
-	const qs_sm n_cols = qs->relations.length.now, v_size = n_cols > qs->base.length ? n_cols : qs->base.length;
+	const uint32 n_cols = qs->relations.length.now, v_size = n_cols > qs->base.length ? n_cols : qs->base.length;
 	const uint64_t safe_size = qs->lanczos.safe_length;
 	uint64_t *md[6], *xl[2], *sm[13], *tmp, *res, mask_0, mask_1;
-	qs_sm i, dim_0, dim_1;
+	uint32 i, dim_0, dim_1;
 	qs->mem.now = memAligned((uint64_t *) qs->mem.now + 1); // keep some padding.
 	lanczos_build_array(qs, md, 6, safe_size);
 	lanczos_build_array(qs, sm, 13, 64);
@@ -236,7 +236,7 @@ uint64_t *lanczos_block_worker(qs_sheet *qs) {
 		lanczos_mul_64xN_Nx64(qs, md[4], md[4], xl[1], sm[5]);
 		for (i = 0; i < 64 && !(sm[3][i]); ++i);
 		if (i != 64) {
-			dim_0 = (qs_sm) lanczos_find_non_singular_sub(sm[3], sm[12], sm[11], dim_1, sm[0]);
+			dim_0 = (uint32) lanczos_find_non_singular_sub(sm[3], sm[12], sm[11], dim_1, sm[0]);
 			if (dim_0) {
 				mask_0 = 0;
 				for (i = 0; i < dim_0; ++i)
@@ -303,7 +303,7 @@ uint64_t *lanczos_block_worker(qs_sheet *qs) {
 void lanczos_reduce_matrix(qs_sheet *qs) {
 	// a filtering is not always necessary to make "lanczos_block_worker" succeed :
 	// - it writes to the relations [ Y lengths, relation counter ] will change
-	qs_sm a, b, c, row, col, reduced_rows = qs->base.length, *counts;
+	uint32 a, b, c, row, col, reduced_rows = qs->base.length, *counts;
 	counts = memset(qs->buffer[1], 0, qs->base.length * sizeof(*qs->buffer[1]));
 	if (qs->sieve_again_perms)
 		for (a = 0; a < qs->relations.length.now; ++a) {
@@ -356,10 +356,10 @@ uint64_t *block_lanczos(qs_sheet *qs) {
 		qs->lanczos.safe_length = qs->base.length;
 	qs->lanczos.safe_length += 64 - qs->lanczos.safe_length % 64;
 	//
-	const qs_sm tries = 5, reduce_at = 3;
+	const uint32 tries = 5, reduce_at = 3;
 	uint64_t *res;
 	//
-	for(qs_sm i = 0; i < tries; ++i) {
+	for(uint32 i = 0; i < tries; ++i) {
 		if (i == reduce_at && !qs->lanczos.snapshot[0].relation)
 			lanczos_reduce_matrix(qs);
 		// This algorithm is likely to quickly report the success of the Quadratic Sieve,
