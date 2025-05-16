@@ -1,7 +1,7 @@
 //  Enjoy the Classic Self-Initializing Quadratic Sieve (SIQS) written in C,
 //  released "as it" into the public domain, without any warranty, express or implied.
 
-int factorization_quadratic_sieve(state * state, int bits) {
+int quadraticSieve(state * state, int bits) {
 	// The state contains a number N from the factorization manager and the Quadratic Sieve must :
 	// - use resources present in the state (temporary variables + parameters)
 	// - register prime (as possible) factors of N using the state
@@ -783,7 +783,7 @@ int qs_register_divisor(qs_sheet *qs) {
 			cint_div(qs->sheet, &qs->vars.N, curr, Q, R) ;
 			if (R->mem == R->end && IN_RANGE(Q) && (tmp = qs_divisors_uniqueness_helper(qs, Q)))
 				tasks[i++] = (struct task){tmp, 3}; // 3. Divides N.
-			pow = factorization_any_root_checker(qs->state, curr, Q, R) ;
+			pow = anyRootCheck(qs->state, curr, Q, R) ;
 			if (pow && IN_RANGE(Q) && (tmp = qs_divisors_uniqueness_helper(qs, Q)))
 				tasks[i++] = (struct task){tmp, 4}; // 4. Notes a perfect power.
 			for (qs_sm j = 0; j < qs->divisors.length; ++j) {

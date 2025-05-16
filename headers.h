@@ -278,12 +278,12 @@ static void debug_print(const state *, int , const char *, ...);
 static void display_progress(const char *, double);
 static void manager_add_factor(state *, const cint *, int, int);
 static void manager_add_simple_factor(state *, qs_md, int, int);
-static void factorization_64_bits(state *);
-static int factorization_trial_division(state *, int, int);
-static int factorization_any_root_checker(state *, const cint *, cint *, cint *);
-static int factorization_perfect_power_checker(state *, int);
-static int factorization_prime_number_checker(state *, int) ;
-static int factorization_give_up(state *, int);
+static void factorPollardsRho(state *);
+static int trialDivide(state *, int, int);
+static int anyRootCheck(state *, const cint *, cint *, cint *);
+static int perfectPowerCheck(state *, int);
+static int primeCheck(state *, int);
+static int giveUp(state *, int);
 static int factor(state *);
 static int validate_input_file(state *);
 static size_t prepare_file_descriptors(state *);
@@ -320,7 +320,7 @@ static u64 square_extraction(u64 *, int *);
 static void fac_64_worker(state *, u64, fac64_row *);
 
 // Quadratic sieve.
-static int factorization_quadratic_sieve(state *, int);
+static int quadraticSieve(state *, int);
 static int inner_continuation_condition(qs_sheet *);
 static int outer_continuation_condition(qs_sheet *);
 static void qs_parametrize(qs_sheet *);

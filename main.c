@@ -10,7 +10,7 @@
 #include "headers.h"				// the headers
 #include "manager.c"				// the factorization manager and i/o utils
 #include "basic-math.c"				// the math shortcuts and functions (math.h isn't used)
-#include "64-bits-factorization.c"	// the factorization for small numbers (Pollard's Rho)
+#include "pollards-rho.c"	// the factorization for small numbers (Pollard's Rho)
 #include "quadratic-sieve.c"		// the Quadratic Sieve (essential part of this project)
 #include "block-lanczos.c"			// the Lanczos Block algorithm (essential part of this project)
 

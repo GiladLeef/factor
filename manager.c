@@ -364,7 +364,7 @@ void manager_add_simple_factor(state *state, qs_md num, int pow, int is_prime) {
 	manager_add_factor(state, state->session.tmp, pow, is_prime);
 }
 
-void factorization_64_bits(state *state) {
+void factorPollardsRho(state *state) {
 	fac64_row res[16];
 	u64 num = simple_cint_to_int(&state->session.num);
 	fac_64_worker(state, num, res);
@@ -373,7 +373,7 @@ void factorization_64_bits(state *state) {
 	cint_reinit(&state->session.num, 1);
 }
 
-int factorization_trial_division(state *state, int stage, int bits) {
+int trialDivide(state *state, int stage, int bits) {
 	assert(64 < bits);
 	const int calc = stage == 2 ? (1 << 20) - 23250 * bits + 127 * bits * bits : 4669914;
 	const qs_sm trial_upto = stage == 1 ? 524 : calc < 65522 ? 65522 : 4669914 < calc ? 4669914 : calc;
@@ -404,7 +404,7 @@ int factorization_trial_division(state *state, int stage, int bits) {
 	return 0;
 }
 
-int factorization_any_root_checker(state *state, const cint *n, cint *root, cint *rem) {
+int anyRootCheck(state *state, const cint *n, cint *root, cint *rem) {
 	// Returns the lowest power when the number is a perfect power, 0 otherwise.
 	// The function takes into account the trial divisions already performed.
 	int res = 0;
@@ -425,10 +425,10 @@ int factorization_any_root_checker(state *state, const cint *n, cint *root, cint
 	return res;
 }
 
-int factorization_perfect_power_checker(state *state, int bits) {
+int perfectPowerCheck(state *state, int bits) {
 	assert(64 < bits);
 	cint *root = state->session.tmp + 1, *rem = root + 1;
-	int pow = factorization_any_root_checker(state, &state->session.num, root, rem);
+	int pow = anyRootCheck(state, &state->session.num, root, rem);
 	if (pow) {
 		manager_add_factor(state, root, pow, -1);
 		cint_reinit(&state->session.num, 1);
@@ -436,7 +436,7 @@ int factorization_perfect_power_checker(state *state, int bits) {
 	return pow;
 }
 
-int factorization_prime_number_checker(state *state, int bits) {
+int primeCheck(state *state, int bits) {
 	assert(64 < bits);
 	cint_sheet *sheet = state->session.sheet;
 	const int is_prime = cint_is_prime(sheet, &state->session.num, -1, state->session.seed) != 0;
@@ -447,7 +447,7 @@ int factorization_prime_number_checker(state *state, int bits) {
 	return is_prime;
 }
 
-int factorization_give_up(state *state, int bits) {
+int giveUp(state *state, int bits) {
 	assert(64 < bits);
 	manager_add_factor(state, &state->session.num, 1, 0);
 	cint_reinit(&state->session.num, 1);
@@ -488,15 +488,15 @@ int factor(state *state) {
 		if (bits < 65) {
 			// 64-bit simple Pollard's Rho.
 			if (1 < bits || start_idx == 0)
-				factorization_64_bits(state);
+				factorPollardsRho(state);
 		} else {
-			const int res = factorization_trial_division(state, 1, bits)
-							|| factorization_prime_number_checker(state, bits)
-							|| factorization_trial_division(state, 2, bits)
-							|| factorization_perfect_power_checker(state, bits)
-							|| factorization_quadratic_sieve(state, bits)
-							|| factorization_trial_division(state, 3, bits)
-							|| factorization_give_up(state, bits);
+			const int res = trialDivide(state, 1, bits)
+							|| primeCheck(state, bits)
+							|| trialDivide(state, 2, bits)
+							|| perfectPowerCheck(state, bits)
+							|| quadraticSieve(state, bits)
+							|| trialDivide(state, 3, bits)
+							|| giveUp(state, bits);
 			assert(res);
 			if (cint_compare_char(&state->session.num, 1))
 				manager_add_factor(state, &state->session.num, 1, -1);
