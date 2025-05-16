@@ -310,14 +310,14 @@ static qs_sm tonelli_shanks(qs_sm, qs_sm);
 static qs_sm modular_inverse(qs_sm, qs_sm);
 
 // 64-bit factorization.
-static int bit_size(u64);
-static u64 mul_mod(u64, u64, u64);
-static u64 pow_mod(u64, u64, u64);
-static int is_prime_64_bits(u64);
-static u64 pollard_rho(u64, uint64_t *);
-static u64 nth_root(u64, u64);
-static u64 square_extraction(u64 *, int *);
-static void fac_64_worker(state *, u64, fac64_row *);
+static int bitSize(u64);
+static u64 mulMod(u64, u64, u64);
+static u64 powMod(u64, u64, u64);
+static int isPrime64bits(u64);
+static u64 pollardsRho(u64, uint64_t *);
+static u64 nthRoot(u64, u64);
+static u64 squareExtraction(u64 *, int *);
+static void rhoWorker(state *, u64, fac64_row *);
 
 // Quadratic sieve.
 static int quadraticSieve(state *, int);

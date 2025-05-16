@@ -367,7 +367,7 @@ void manager_add_simple_factor(state *state, qs_md num, int pow, int is_prime) {
 void factorPollardsRho(state *state) {
 	fac64_row res[16];
 	u64 num = simple_cint_to_int(&state->session.num);
-	fac_64_worker(state, num, res);
+	rhoWorker(state, num, res);
 	for (fac64_row *r = res; (*r).power; ++r)
 		manager_add_simple_factor(state, (*r).prime, (*r).power, (*r).prime != 1);
 	cint_reinit(&state->session.num, 1);
@@ -414,7 +414,7 @@ int anyRootCheck(state *state, const cint *n, cint *root, cint *rem) {
 	const int max_root = (int) cint_count_bits(n);
 	for (int nth = 2; nth < max_root; nth += 1 + (nth != 2))
 		if (is_prime_4669913((qs_sm)nth)) {
-			cint_nth_root_remainder(sheet, n, nth, root, rem);
+			cint_nthRoot_remainder(sheet, n, nth, root, rem);
 			if (rem->mem == rem->end) {
 				res = nth;
 				break;

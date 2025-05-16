@@ -474,19 +474,19 @@ __attribute__((unused)) static inline char *cint_to_string_alt(cint_sheet *sheet
 	return cint_to_string_buffer_alt(sheet, num, mem, base);
 }
 
-__attribute__((unused)) static inline void cint_mul_mod(cint_sheet *sheet, const cint *lhs, const cint *rhs, const cint *mod, cint *res) {
+__attribute__((unused)) static inline void cint_mulMod(cint_sheet *sheet, const cint *lhs, const cint *rhs, const cint *mod, cint *res) {
 	cint *a = h_cint_tmp(sheet, 2, res), *b = h_cint_tmp(sheet, 3, res);
 	cint_mul(lhs, rhs, a);
 	cint_div(sheet, a, mod, b, res);
 }
 
-static inline void cint_mul_modi(cint_sheet *sheet, cint *lhs, const cint *rhs, const cint *mod) {
+static inline void cint_mulModi(cint_sheet *sheet, cint *lhs, const cint *rhs, const cint *mod) {
 	cint *a = h_cint_tmp(sheet, 2, lhs), *b = h_cint_tmp(sheet, 3, lhs);
 	cint_mul(lhs, rhs, a);
 	cint_div(sheet, a, mod, b, lhs);
 }
 
-static inline void cint_pow_modi(cint_sheet *sheet, cint *n, const cint *exp, const cint *mod) {
+static inline void cint_powModi(cint_sheet *sheet, cint *n, const cint *exp, const cint *mod) {
 	// same as "power" algorithm, difference is that it take the modulo as soon as possible.
 	if (n->mem != n->end) {
 		size_t bits = cint_count_bits(exp);
@@ -516,9 +516,9 @@ static inline void cint_pow_modi(cint_sheet *sheet, cint *n, const cint *exp, co
 	}
 }
 
-__attribute__((unused)) static void cint_pow_mod(cint_sheet *sheet, const cint *n, const cint *exp, const cint *mod, cint *res) {
+__attribute__((unused)) static void cint_powMod(cint_sheet *sheet, const cint *n, const cint *exp, const cint *mod, cint *res) {
 	cint_dup(res, n);
-	cint_pow_modi(sheet, res, exp, mod);
+	cint_powModi(sheet, res, exp, mod);
 }
 
 static void cint_gcd(cint_sheet *sheet, const cint *lhs, const cint *rhs, cint *gcd) {
@@ -606,7 +606,7 @@ static void cint_cbrt(cint_sheet *sheet, const cint *num, cint *res, cint *rem) 
 	}
 }
 
-static void cint_nth_root(cint_sheet *sheet, const cint *num, const unsigned nth, cint *res) {
+static void cint_nthRoot(cint_sheet *sheet, const cint *num, const unsigned nth, cint *res) {
 	// original nth-root algorithm, it does not try to decompose "nth" into prime factors.
 	switch (nth) {
 		case 0 : cint_reinit(res, num->end == num->mem + 1 && *num->mem == 1); break;
@@ -636,12 +636,12 @@ static void cint_nth_root(cint_sheet *sheet, const cint *num, const unsigned nth
 	}
 }
 
-static void cint_nth_root_remainder(cint_sheet *sheet, const cint *num, const unsigned nth, cint *res, cint *rem) {
+static void cint_nthRoot_remainder(cint_sheet *sheet, const cint *num, const unsigned nth, cint *res, cint *rem) {
 	// nth-root algorithm don't provide the remainder, so here it computes the remainder.
 	if (nth == 2) cint_sqrt(sheet, num, res, rem);
 	else if (nth == 3) cint_cbrt(sheet, num, res, rem);
 	else {
-		cint_nth_root(sheet, num, nth, res);
+		cint_nthRoot(sheet, num, nth, res);
 		cint *a = h_cint_tmp(sheet, 2, num);
 		cint_reinit(a, nth);
 		cint_pow(sheet, res, a, rem);
@@ -712,10 +712,10 @@ int cint_is_prime(cint_sheet *sheet, const cint *N, int iterations, uint64_t * s
 		for (bits = 2; iterations-- && res;) {
 			cint_random_bits(B, bits, seed); // take a number
 			bits = 3 + *B->mem % rand_mod;
-			cint_pow_modi(sheet, B, C, N); // raise to the power C mod N
+			cint_powModi(sheet, B, C, N); // raise to the power C mod N
 			if (*B->mem != 1 || B->end != B->mem + 1) {
 				for (b = a; b-- && (res = h_cint_compare(A, B));)
-					cint_mul_modi(sheet, B, B, N);
+					cint_mulModi(sheet, B, B, N);
 				res = !res;
 			} // only a prime number can hold (res = 1) forever
 		}

@@ -468,7 +468,7 @@ void qs_setup_polynomial_parameters(qs_sheet *qs) {
 	cint_sqrt(qs->sheet, kN, TMP, R);
 	cint_div(qs->sheet, TMP, &qs->constants.M_HALF, &qs->poly.D, R);
 	qs->poly.d_bits = (qs_sm) cint_count_bits(&qs->poly.D);
-	cint_nth_root(qs->sheet, &qs->poly.D, s, R); // use the s-th root of D.
+	cint_nthRoot(qs->sheet, &qs->poly.D, s, R); // use the s-th root of D.
 	const qs_sm root = (qs_sm) simple_cint_to_int(R) ;
 	for (i = 1; qs->base.data[i].num <= root; ++i, assert(i < qs->base.length));
 	if (i < span) {
@@ -902,9 +902,9 @@ void register_regular_relation(qs_sheet * qs, const cint * KEY, const qs_sm * co
 		simple_int_to_cint(A, 1);
 		for (j = 0; j < rel->axis.Z.length; ++j) {
 			simple_int_to_cint(B, qs->base.data[rel->axis.Z.data[j]].num);
-			cint_mul_modi(qs->sheet, A, B, &qs->constants.kN);
+			cint_mulModi(qs->sheet, A, B, &qs->constants.kN);
 		}
-		cint_mul_mod(qs->sheet, rel->X, rel->X, &qs->constants.kN, B);
+		cint_mulMod(qs->sheet, rel->X, rel->X, &qs->constants.kN, B);
 		verified = !cint_compare(A, B) || (cint_addi(A, B), !cint_compare(A, &qs->constants.kN));
 	}
 	if (verified){
@@ -984,11 +984,11 @@ void register_partial_relation(qs_sheet * qs, const cint * KEY, const cint * VAL
 
 	if (old) {
 		BEZOUT = old->X + 1 ; // the modular inverse was stored here.
-		cint_mul_mod(qs->sheet, new->X, BEZOUT, &qs->constants.kN, &qs->vars.CYCLE);
+		cint_mulMod(qs->sheet, new->X, BEZOUT, &qs->constants.kN, &qs->vars.CYCLE);
 		do {
 			if (old != new) {
 				// combines, it registers a smooth relation using the 2 buffers.
-				cint_mul_mod(qs->sheet, &qs->vars.CYCLE, old->X, &qs->constants.kN, &qs->vars.KEY);
+				cint_mulMod(qs->sheet, &qs->vars.CYCLE, old->X, &qs->constants.kN, &qs->vars.KEY);
 				qs_sm * restrict begin = qs->buffer[0], * restrict pen = begin;
 				data = memset(qs->buffer[1], 0, qs->base.length * sizeof(*data));
 				for (qs_sm i = 0; i < new->Y.length; i += 2)
@@ -1025,7 +1025,7 @@ void qs_factorize_using_null_vectors(qs_sheet * qs, const uint64_t * restrict co
 					const struct qs_relation * restrict const rel = qs->relations.data[i];
 					// The algorithm must retrieve the X and Z relation fields
 					// related to the Y field initially submitted to Block Lanczos.
-					cint_mul_modi(qs->sheet, X, rel->X, &qs->vars.N);
+					cint_mulModi(qs->sheet, X, rel->X, &qs->vars.N);
 					for (qs_sm j = 0; j < rel->axis.Z.length; ++j)
 						++power_of_primes[rel->axis.Z.data[j]];
 				}
@@ -1034,8 +1034,8 @@ void qs_factorize_using_null_vectors(qs_sheet * qs, const uint64_t * restrict co
 					// powers are even ... square root ...
 					simple_int_to_cint(TMP, qs->base.data[i].num);
 					simple_int_to_cint(POW, power_of_primes[i] >> 1);
-					cint_pow_modi(qs->sheet, TMP, POW, &qs->vars.N);
-					cint_mul_modi(qs->sheet, Y, TMP, &qs->vars.N);
+					cint_powModi(qs->sheet, TMP, POW, &qs->vars.N);
+					cint_mulModi(qs->sheet, Y, TMP, &qs->vars.N);
 				}
 			h_cint_subi(Y, X);
 			if (Y->mem != Y->end) {
