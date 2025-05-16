@@ -204,7 +204,7 @@ void lanczos_build_array(qs_sheet *qs, uint64_t **target, const size_t quantity,
 	const char *mem_ends = (char *) qs->mem.now + qs->mem.bytes_allocated;
 	assert(mem_needs < mem_ends);
 	for (size_t i = 0; i < quantity; ++i)
-		target[i] = qs->mem.now, qs->mem.now = mem_aligned(target[i] + size);
+		target[i] = qs->mem.now, qs->mem.now = memAligned(target[i] + size);
 }
 
 uint64_t *lanczos_block_worker(qs_sheet *qs) {
@@ -212,7 +212,7 @@ uint64_t *lanczos_block_worker(qs_sheet *qs) {
 	const uint64_t safe_size = qs->lanczos.safe_length;
 	uint64_t *md[6], *xl[2], *sm[13], *tmp, *res, mask_0, mask_1;
 	qs_sm i, dim_0, dim_1;
-	qs->mem.now = mem_aligned((uint64_t *) qs->mem.now + 1); // keep some padding.
+	qs->mem.now = memAligned((uint64_t *) qs->mem.now + 1); // keep some padding.
 	lanczos_build_array(qs, md, 6, safe_size);
 	lanczos_build_array(qs, sm, 13, 64);
 	lanczos_build_array(qs, xl, 2, safe_size < 2048 ? 2048 : safe_size);

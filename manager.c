@@ -1,4 +1,4 @@
-void print_help(const char *path) {
+void printHelp(const char *path) {
 	puts("This software is released \"as it is\" into the public domain, without any warranty, express or implied.\n");
 	puts("DESCRIPTION:");
 	puts("  This software supports factoring numbers through a Self-Initializing Quadratic Sieve (SIQS).");
@@ -42,22 +42,22 @@ void print_help(const char *path) {
 	puts("  1  At least one number among the results is not fully factored.\n");
 }
 
-qs_md get_num(const char *s) {
+qs_md getNum(const char *s) {
 	char *end = 0;
 	const qs_md res = strtoull(s + (*s == '-'), &end, 10);
 	return end != s && !*end ? *s == '-' ? -res : res : 0;
 }
 
-int cli_param_match(const char *str, const char *long_name, const char *short_name) {
+int cliParamMatch(const char *str, const char *long_name, const char *short_name) {
 	return (short_name && !strcmp(str, short_name)) || !strcmp(str, long_name);
 }
 
 int read_key_and_3_values(const char **argv, state *state) {
 #define FILL(name_1, shortcut, name_2) \
-    if (cli_param_match(*argv, "--" #name_1, "-" #shortcut) && \
-        (n_1 = get_num(*(argv + 1))) && \
-        (n_2 = get_num(*(argv + 2))) && \
-        (n_3 = get_num(*(argv + 3)))) { \
+    if (cliParamMatch(*argv, "--" #name_1, "-" #shortcut) && \
+        (n_1 = getNum(*(argv + 1))) && \
+        (n_2 = getNum(*(argv + 2))) && \
+        (n_3 = getNum(*(argv + 3)))) { \
         state->params.name_2[0] = n_1; \
         state->params.name_2[1] = n_2; \
         state->params.name_2[2] = n_3; \
@@ -71,10 +71,10 @@ int read_key_and_3_values(const char **argv, state *state) {
 }
 
 int read_key_and_2_values(const char **argv, state *state) {
-#define FETCH ((n_1 = get_num(val_1)) && (n_2 = get_num(val_2)))
+#define FETCH ((n_1 = getNum(val_1)) && (n_2 = getNum(val_2)))
 	const char *key = *argv, *val_1 = *(argv + 1), *val_2 = *(argv + 2);
 	qs_md n_1, n_2;
-	if (cli_param_match(key, "--demand", "-d") && FETCH)
+	if (cliParamMatch(key, "--demand", "-d") && FETCH)
 		state->params.demand[0] = n_1, state->params.demand[1] = n_2;
 	else
 		return 0;
@@ -83,24 +83,24 @@ int read_key_and_2_values(const char **argv, state *state) {
 #undef FETCH
 }
 
-int read_key_value(const char **argv, state *state) {
+int readKeyValue(const char **argv, state *state) {
 	const char *key = *argv, *value = *(argv + 1);
-	if (cli_param_match(key, "--verbose", "-v") && *value >= '0' && *value <= '9' && !*(value + 1))
+	if (cliParamMatch(key, "--verbose", "-v") && *value >= '0' && *value <= '9' && !*(value + 1))
 		state->params.verbose = *value - '0';
-	else if (cli_param_match(key, "--input-file", "-i"))
+	else if (cliParamMatch(key, "--input-file", "-i"))
 		state->params.input_file = value;
-	else if (cli_param_match(key, "--output-file", "-o"))
+	else if (cliParamMatch(key, "--output-file", "-o"))
 		state->params.output_file = value;
-	else if (cli_param_match(key, "--timeout", "-t"))
-		state->params.timeout = get_num(value);
-	else if (cli_param_match(key, "--rand-seed", "-r"))
-		state->params.rand.seed ^= state->params.rand.custom = *value == '0' && *(value + 1) == 0 ? get_time_ms() : get_num(value);
-	else if (cli_param_match(key, "--demand", "-d") && get_num(value))
-		state->params.demand[0] = get_num(value);
+	else if (cliParamMatch(key, "--timeout", "-t"))
+		state->params.timeout = getNum(value);
+	else if (cliParamMatch(key, "--rand-seed", "-r"))
+		state->params.rand.seed ^= state->params.rand.custom = *value == '0' && *(value + 1) == 0 ? getTime() : getNum(value);
+	else if (cliParamMatch(key, "--demand", "-d") && getNum(value))
+		state->params.demand[0] = getNum(value);
 		// Quadratic Sieve specific parameters.
 #define QS_PARAM(name_1, name_2) \
-    else if (cli_param_match(key, "--qs-" #name_1, 0)) \
-        state->params.qs_##name_2 = get_num(value);
+    else if (cliParamMatch(key, "--qs-" #name_1, 0)) \
+        state->params.qs_##name_2 = getNum(value);
 	QS_PARAM(multiplier, multiplier)
 	QS_PARAM(base-size, base_size)
 	QS_PARAM(large-prime, large_prime)
@@ -118,23 +118,23 @@ int read_key_value(const char **argv, state *state) {
 	return 1;
 }
 
-int read_flags(const char **argv, state *state) {
+int readFlags(const char **argv, state *state) {
 	const char *key = *argv;
-	if (cli_param_match(key, "--verbose", "-v"))
+	if (cliParamMatch(key, "--verbose", "-v"))
 		state->params.verbose = 2;
-	else if (cli_param_match(key, "--output-json-extended", "-J"))
+	else if (cliParamMatch(key, "--output-json-extended", "-J"))
 		state->params.output_format = 'J';
-	else if (cli_param_match(key, "--output-json", "-j"))
+	else if (cliParamMatch(key, "--output-json", "-j"))
 		state->params.output_format = 'j';
-	else if (cli_param_match(key, "--output-csv-extended", "-C"))
+	else if (cliParamMatch(key, "--output-csv-extended", "-C"))
 		state->params.output_format = 'C';
-	else if (cli_param_match(key, "--output-csv", "-c"))
+	else if (cliParamMatch(key, "--output-csv", "-c"))
 		state->params.output_format = 'c';
-	else if (cli_param_match(key, "--force", "-f"))
+	else if (cliParamMatch(key, "--force", "-f"))
 		state->params.force = 1;
-	else if (cli_param_match(key, "--demand", "-d"))
+	else if (cliParamMatch(key, "--demand", "-d"))
 		state->params.demand[0] = -1;
-	else if (cli_param_match(key, "--help", "-h"))
+	else if (cliParamMatch(key, "--help", "-h"))
 		state->params.help = 1;
 	else
 		return 0;
@@ -142,7 +142,7 @@ int read_flags(const char **argv, state *state) {
 	return 1;
 }
 
-void simple_rand(cint_sheet *sheet, uint64_t *seed, cint *nums, char *comment, const int factors_needed, const int bits_needed) {
+void random(cint_sheet *sheet, uint64_t *seed, cint *nums, char *comment, const int factors_needed, const int bits_needed) {
 // Produces a random composite number based on the seed, number of bits, and factors.
 // Fill in the comment if the resulting number intentionally contains a power, empty it otherwise.
 	begin :;
@@ -186,7 +186,7 @@ void simple_rand(cint_sheet *sheet, uint64_t *seed, cint *nums, char *comment, c
 		cint_dup(nums, N);
 }
 
-void generate_input_file(state *state) {
+void generateInputFile(state *state) {
 	// Simulate a factorization demand based on the "-d <min-bits> <max-bits> <count>" command line option.
 	// For example "--demand 130 140 1000" provide 1000 non-trivial numbers between 130 and 140 bits.
 	// The generated "demand.txt" file is suitable as an input file and consistent across platforms.
@@ -237,7 +237,7 @@ void generate_input_file(state *state) {
 			// DEVELOPMENT : decrease 24 and 17 in the next line to test the trial division.
 			const int n_factors_max = (int)bits / (65.0 <= bits ? 24 : 34.0 <= bits ? 17 : 3);
 			const int n_factors = xor_rand(&seed, 2, xor_rand(&seed, 2, n_factors_max));
-			simple_rand(sheet, &seed, nums, comment, n_factors, bits);
+			random(sheet, &seed, nums, comment, n_factors, bits);
 			cint_to_string_buffer(nums, buf, 10);
 			fprintf(fp, "%-*s # %d bits with %d factors%s\n", max_len, buf, (int) bits, n_factors, comment);
 			fflush(fp);
@@ -257,7 +257,7 @@ void generate_input_file(state *state) {
 }
 
 // cint shortcuts
-char *simple_cint_string(state *state, const cint *N) {
+char *cintString(state *state, const cint *N) {
 	char *s = cint_to_string_buffer(N, state->session.output_string, 10);
 	if (0)    // Add a thousand separator in debug for large number (as desired).
 		for (int len = (int) strlen(s), i = len - 3, j = *s == '-'; j < i; i -= 3)
@@ -265,13 +265,13 @@ char *simple_cint_string(state *state, const cint *N) {
 	return s;
 }
 
-void simple_inline_cint(cint *N, const size_t size, void **mem) {
+void inlineCint(cint *N, const size_t size, void **mem) {
 	// Fixed size cint is inlined, given mem is updated accordingly.
 	N->mem = N->end = (h_cint_t *) *mem;
 	*mem = N->mem + (N->size = size + 1);
 }
 
-void simple_dup_cint(cint *A, const cint *B, void **mem) {
+void dupCint(cint *A, const cint *B, void **mem) {
 	// Duplicates cint using the given memory, which is updated accordingly.
 	// It uses the minimal size, the duplicate is not resizable.
 	A->mem = A->end = (h_cint_t *) *mem;
@@ -280,12 +280,12 @@ void simple_dup_cint(cint *A, const cint *B, void **mem) {
 	*mem = A->mem + A->size;
 }
 
-void simple_int_to_cint(cint *num, qs_md value) {
+void intToCint(cint *num, qs_md value) {
 	// Pass the given 64-bit number into the given cint (positive only).
 	for (cint_erase(num); value; *num->end++ = (h_cint_t) (value & cint_mask), value >>= cint_exponent);
 }
 
-qs_md simple_cint_to_int(const cint *num) {
+qs_md cintToInt(const cint *num) {
 	// Return the value of a cint as a 64-bit integer (sign is ignored).
 	qs_md res = 0;
 	for (h_cint_t *ptr = num->end; ptr > num->mem; res = (qs_md) (res * cint_base + *--ptr));
@@ -299,21 +299,21 @@ struct avl_node *avl_cint_inserter(void *args, const void *key_to_save) {
 	struct avl_node *res = mem;
 	res->key = (cint *) (res + 1);
 	mem = (cint *) res->key + 1;
-	simple_dup_cint(res->key, key_to_save, &mem);
+	dupCint(res->key, key_to_save, &mem);
 	assert(res->value == 0);
 	*(void **) args = mem;
 	return res;
 }
 
 // System
-void *mem_aligned(void *ptr) {
+void *memAligned(void *ptr) {
 	// Default alignment of the return value is 64.
 	char *res __attribute__((aligned(64)));
 	res = (char *) ptr + (64 - (uintptr_t) ptr) % 64;
 	return res;
 }
 
-uint64_t get_time_ms(void) {
+uint64_t getTime(void) {
 	// returns the current Unix timestamp with milliseconds.
 	struct timeval time;
 	gettimeofday(&time, NULL);
@@ -347,11 +347,11 @@ void manager_add_factor(state *state, const cint *num, int pow, int is_prime) {
 	int i = 0;
 	while (state->session.res[i].power && h_cint_compare(&state->session.res[i].num, num))
 		++i;
-	simple_inline_cint(&state->session.res[i].num, num->end - num->mem, &state->session.mem.now);
+	inlineCint(&state->session.res[i].num, num->end - num->mem, &state->session.mem.now);
 	cint_dup(&state->session.res[i].num, num);
 	state->session.res[i].power = state->session.power * pow;
 	if (0 < is_prime && !cint_is_prime(state->session.sheet, num, -1, state->session.seed)) {
-		debug_print(state, 3, "[x] Maintenance challenges %s's primality test.\n", simple_cint_string(state, num));
+		debug_print(state, 3, "[x] Maintenance challenges %s's primality test.\n", cintString(state, num));
 		is_prime = -1 ; // [MATH INSURANCE] Re-factor this number due to conflicting Miller-Rabin tests.
 	}
 	state->session.res[i].prime = is_prime; // Possible values are: -1 (must factorize), 0 (not prime), and 1 (prime).
@@ -360,13 +360,13 @@ void manager_add_factor(state *state, const cint *num, int pow, int is_prime) {
 
 void manager_add_simple_factor(state *state, qs_md num, int pow, int is_prime) {
 	assert(0 < pow);
-	simple_int_to_cint(state->session.tmp, num);
+	intToCint(state->session.tmp, num);
 	manager_add_factor(state, state->session.tmp, pow, is_prime);
 }
 
 void factorPollardsRho(state *state) {
 	fac64_row res[16];
-	u64 num = simple_cint_to_int(&state->session.num);
+	u64 num = cintToInt(&state->session.num);
 	rhoWorker(state, num, res);
 	for (fac64_row *r = res; (*r).power; ++r)
 		manager_add_simple_factor(state, (*r).prime, (*r).power, (*r).prime != 1);
@@ -455,7 +455,7 @@ int giveUp(state *state, int bits) {
 }
 
 int factor(state *state) {
-	state->session.duration_ms = get_time_ms();
+	state->session.duration_ms = getTime();
 	state->session.trial_start = 3;
 	state->session.power = 1;
 	int start_idx = 0, end_idx = 0;
@@ -541,7 +541,7 @@ int factor(state *state) {
 	for (int i = start_idx; state->session.res[i].power; ++i)
 		state->code |= status |= !state->session.res[i].prime;
 
-	state->session.duration_ms = get_time_ms() - state->session.duration_ms;
+	state->session.duration_ms = getTime() - state->session.duration_ms;
 	return status ;
 }
 

@@ -257,23 +257,23 @@ typedef struct {
 } qs_sheet;
 
 // Factorization manager, file i/o utilities, misc utilities.
-static void print_help(const char *);
-static qs_md get_num(const char *);
-static int cli_param_match(const char *, const char *, const char *);
+static void printHelp(const char *);
+static qs_md getNum(const char *);
+static int cliParamMatch(const char *, const char *, const char *);
 static int read_key_and_3_values(const char **, state *);
 static int read_key_and_2_values(const char **, state *);
-static int read_key_value(const char **, state *);
-static int read_flags(const char **, state *);
-static void simple_rand(cint_sheet *, uint64_t *, cint *, char *, int, int);
-static void generate_input_file(state *);
-static char *simple_cint_string(state *, const cint *);
-static inline void simple_inline_cint(cint *, size_t, void **);
-static void simple_dup_cint(cint *, const cint *, void **);
-static inline void simple_int_to_cint(cint *, qs_md);
-static qs_md simple_cint_to_int(const cint *);
+static int readKeyValue(const char **, state *);
+static int readFlags(const char **, state *);
+static void random(cint_sheet *, uint64_t *, cint *, char *, int, int);
+static void generateInputFile(state *);
+static char *cintString(state *, const cint *);
+static inline void inlineCint(cint *, size_t, void **);
+static void dupCint(cint *, const cint *, void **);
+static inline void intToCint(cint *, qs_md);
+static qs_md cintToInt(const cint *);
 static struct avl_node *avl_cint_inserter(void *, const void *);
-static void *mem_aligned(void *);
-static uint64_t get_time_ms(void);
+static void *memAligned(void *);
+static uint64_t getTime(void);
 static void debug_print(const state *, int , const char *, ...);
 static void display_progress(const char *, double);
 static void manager_add_factor(state *, const cint *, int, int);
