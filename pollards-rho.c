@@ -120,13 +120,13 @@ void rhoWorker(state *state, uint64 n, fac64_row *rows) {
 								tasks[k].prime /= n, x += tasks[k].power;
 						*rows++ = (fac64_row) {n, (int) x * pow};
 					} else if (x = nthRoot(n, 2), n == x * x) {
-						debug_print(state, 4, "- %" PRIu64 " is the square of %" PRIu64 ".\n", n, x);
+						debugPrint(state, 4, "- %" PRIu64 " is the square of %" PRIu64 ".\n", n, x);
 						tasks[i++] = (fac64_row) {x, 2 * pow};
 					} else if (x = nthRoot(n, 3), n == x * x * x) {
-						debug_print(state, 4, "- %" PRIu64 " is the cube of %" PRIu64 ".\n", n, x);
+						debugPrint(state, 4, "- %" PRIu64 " is the cube of %" PRIu64 ".\n", n, x);
 						tasks[i++] = (fac64_row) {x, 3 * pow};
 					} else {
-						debug_print(state, 4, "%sPollard's Rho on %" PRIu64 " (%d-bit).\n", ++j == 1 ? "" : "- Recursively applying ", n, bitSize(n));
+						debugPrint(state, 4, "%sPollard's Rho on %" PRIu64 " (%d-bit).\n", ++j == 1 ? "" : "- Recursively applying ", n, bitSize(n));
 						while (x = pollardsRho(n, state->session.seed), x == 1 || x == n);
 						tasks[i++] = (fac64_row) {x * x < n ? x : n / x, pow};
 						tasks[i++] = (fac64_row) {x * x < n ? n / x : x, pow};

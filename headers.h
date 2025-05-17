@@ -40,18 +40,18 @@ typedef struct {
 		const char *input_file;
 		const char *output_file;
 		char output_format;
-		uint64 qs_multiplier;
-		uint64 qs_base_size;
-		uint64 qs_sieve;
-		uint64 qs_error_bits;
-		uint64 qs_threshold;
-		uint64 qs_alloc_mb;
-		uint64 qs_large_prime;
-		uint64 qs_poly;
-		uint64 qs_laziness;
+		uint64 QSmultiplier;
+		uint64 QSbase_size;
+		uint64 QSsieve;
+		uint64 QSerrorBits;
+		uint64 QSthreshold;
+		uint64 QSalloc_mb;
+		uint64 QSlarge_prime;
+		uint64 QSpoly;
+		uint64 QSlaziness;
 		//
-		uint64 qs_sieve_cutoff; // not documented (see the source code)
-		uint64 qs_tick_end; // not documented (see the source code)
+		uint64 QSsieve_cutoff; // not documented (see the source code)
+		uint64 QStick_end; // not documented (see the source code)
 	} params;
 	uint64 duration_ms ;
 	FILE *in;
@@ -114,13 +114,13 @@ typedef struct {
 
 	// numbers that are updated
 	struct {
-		cint N;
-		cint FACTOR;
-		cint X;
-		cint KEY;
-		cint VALUE;
-		cint CYCLE;
-		cint TEMP[5];
+		cint n;
+		cint factor;
+		cint x;
+		cint key;
+		cint value;
+		cint cycle;
+		cint temp[5];
 	} vars;
 
 	// polynomial vars
@@ -129,30 +129,30 @@ typedef struct {
 		cint B;
 		cint C;
 		cint D;
-		uint32 d_bits;
+		uint32 dBits;
 		uint32 offset;
 		struct {
-			uint32 x_1;
+			uint32 x1;
 			uint32 half ;
-			uint32 x_2 ;
-			uint32 x_3 ;
+			uint32 x2;
+			uint32 x3;
 		} span;
-		uint32 gray_max;
+		uint32 grayMax;
 		uint32 curves;
 	} poly;
 
 	// constants
 	struct {
 		cint kN;
-		cint ONE;
-		cint TOO_LARGE_PRIME;
-		cint MULTIPLIER;
-		cint M_HALF;
+		cint one;
+		cint tooLargePrime;
+		cint multiplier;
+		cint mHalf;
 	} constants;
 
 	// system
 	struct {
-		uint32 bytes_allocated;
+		uint32 bytesAllocated;
 		void *base;
 		void *now;
 	} mem;
@@ -175,11 +175,11 @@ typedef struct {
 		uint8 *sieve;
 		uint8 *flags;
 		uint32 length;
-		uint32 length_half;
-		uint32 cache_size;
+		uint32 lengthHalf;
+		uint32 cacheSize;
 	} m;
-	uint32 iterative_list[5];
-	uint32 error_bits;
+	uint32 iterativeList[5];
+	uint32 errorBits;
 	struct {
 		uint32 value;
 	} threshold;
@@ -190,7 +190,7 @@ typedef struct {
 		struct {
 			uint32 num;
 			uint32 size;
-			uint32 sqrt_kN_mod_prime;
+			uint32 sqrtKNModPrime;
 			uint32 root[2];
 		} *data;
 		uint32 largest;
@@ -199,18 +199,18 @@ typedef struct {
 
 	// useful data sharing same length
 	struct {
-		uint32 *A_indexes;
+		uint32 *aIndexes;
 		struct {
-			cint B_terms;
-			uint32 *A_inv_double_value_B_terms;
-			uint32 A_over_prime_mod_prime;
-			uint32 prime_index;
-			uint64 prime_squared;
+			cint bTerms;
+			uint32 *aInvDoubleValueBTerms;
+			uint32 aOverPrimeModPrime;
+			uint32 primeIndex;
+			uint64 primeSquared;
 		} *data;
 		struct {
 			uint32 defined;
-			uint32 subtract_one;
-			uint32 double_value;
+			uint32 subtractOne;
+			uint32 doubleValue;
 		} values;
 	} s;
 
@@ -228,25 +228,25 @@ typedef struct {
 			uint32 peak;
 			uint32 needs;
 			uint32 capacity;
-			uint32 by_partial;
+			uint32 byPartial;
 		} length;
-		uint64 too_large_prime;
+		uint64 tooLargePrime;
 	} relations;
 
 	// pointers to the divisors of N are kept in a flat array
 	struct {
-		uint32 total_primes;
+		uint32 totalPrimes;
 		uint32 length;
 		cint **data;
 	} divisors;
 
 	// Lanczos has its own struct
 	struct {
-		uint32 n_iterations;
-		uint32 safe_length;
+		uint32 nIterations;
+		uint32 safeLength;
 		struct {
 			struct QSRelation *relation;
-			uint32 y_length;
+			uint32 yLength;
 		} *snapshot;
 	} lanczos;
 
@@ -258,8 +258,8 @@ typedef struct {
 static void printHelp(const char *);
 static uint64 getNum(const char *);
 static int cliParamMatch(const char *, const char *, const char *);
-static int read_key_and_3_values(const char **, state *);
-static int read_key_and_2_values(const char **, state *);
+static int readKeyAnd3Values(const char **, state *);
+static int readKeyAnd2Values(const char **, state *);
 static int readKeyValue(const char **, state *);
 static int readFlags(const char **, state *);
 static void random(cint_sheet *, uint64_t *, cint *, char *, int, int);
@@ -272,10 +272,10 @@ static uint64 cintToInt(const cint *);
 static struct avl_node *avl_cint_inserter(void *, const void *);
 static void *memAligned(void *);
 static uint64_t getTime(void);
-static void debug_print(const state *, int , const char *, ...);
-static void display_progress(const char *, double);
-static void manager_add_factor(state *, const cint *, int, int);
-static void manager_add_simple_factor(state *, uint64, int, int);
+static void debugPrint(const state *, int , const char *, ...);
+static void displayProgress(const char *, double);
+static void managerAddFactor(state *, const cint *, int, int);
+static void managerAddSimpleFactor(state *, uint64, int, int);
 static void factorPollardsRho(state *);
 static int trialDivide(state *, int, int);
 static int anyRootCheck(state *, const cint *, cint *, cint *);
@@ -283,12 +283,12 @@ static int perfectPowerCheck(state *, int);
 static int primeCheck(state *, int);
 static int giveUp(state *, int);
 static int factor(state *);
-static int validate_input_file(state *);
+static int validateInputFile(state *);
 static size_t prepareFileDescriptors(state *);
-static int validate_string_number(const char *, state *);
-static void output_csv(state *, int, int, int);
-static void output_json(state *, int, int, int);
-static void output_default(state *, int, int, int);
+static int validateStringNumber(const char *, state *);
+static void outputCsv(state *, int, int, int);
+static void outputJson(state *, int, int, int);
+static void outputDefault(state *, int, int, int);
 static void output(state *, int);
 static void prepareSessions(state *);
 static void eraseSession(state *);
@@ -349,18 +349,18 @@ static void factorizeUsingNullVectors(QSSheet *, const uint64_t *restrict);
 static int processRemainingFactors(QSSheet *);
 
 // Linear algebra with Block Lanczos algorithm.
-static void lanczos_mul_MxN_Nx64(const QSSheet *, const uint64_t *, uint32, uint64_t *);
-static void lanczos_mul_trans_MxN_Nx64(const QSSheet *, const uint64_t *, uint64_t *);
-static void lanczos_mul_64xN_Nx64(const QSSheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
-static uint64_t lanczos_find_non_singular_sub(const uint64_t *, const uint64_t *, uint64_t *, uint64_t, uint64_t *);
-static void lanczos_mul_Nx64_64x64_acc(QSSheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
-static void lanczos_mul_64x64_64x64(const uint64_t *, const uint64_t *, uint64_t *);
-static void lanczos_transpose_vector(QSSheet *, const uint64_t *, uint64_t **);
-static void lanczos_combine_cols(QSSheet *, uint64_t *, uint64_t *, uint64_t *, uint64_t *);
-static void lanczos_build_array(QSSheet *, uint64_t **, size_t, size_t);
-static uint64_t *lanczos_block_worker(QSSheet *);
-static void lanczos_reduce_matrix(QSSheet *);
-static uint64_t *block_lanczos(QSSheet *);
+static void mulMxNNx64(const QSSheet *, const uint64_t *, uint32, uint64_t *);
+static void mulTransMxNNx64(const QSSheet *, const uint64_t *, uint64_t *);
+static void mul64xNNx64(const QSSheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
+static uint64_t findNonSingularSub(const uint64_t *, const uint64_t *, uint64_t *, uint64_t, uint64_t *);
+static void mulNx6464x64Acc(QSSheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
+static void mul64x6464x64(const uint64_t *, const uint64_t *, uint64_t *);
+static void transposeVector(QSSheet *, const uint64_t *, uint64_t **);
+static void combineCols(QSSheet *, uint64_t *, uint64_t *, uint64_t *, uint64_t *);
+static void buildArray(QSSheet *, uint64_t **, size_t, size_t);
+static uint64_t *blockWorker(QSSheet *);
+static void reduceMatrix(QSSheet *);
+static uint64_t *blockLanczos(QSSheet *);
 
 // Verbose level 0: just factorization, no other messages (default when there is no terminal).
 // Verbose level 1: also show task progress in percentage (default when there is a terminal).
@@ -368,8 +368,8 @@ static uint64_t *block_lanczos(QSSheet *);
 // Verbose level 3: also show maintenance messages.
 // Verbose level 4: also show Quadratic Sieve detailed information.
 
-#define DEBUG_LEVEL_2(fmt, ...) debug_print(qs->state, 2, fmt, __VA_ARGS__)
-#define DEBUG_LEVEL_3(fmt, ...) debug_print(qs->state, 3, fmt, __VA_ARGS__)
-#define DEBUG_LEVEL_4(fmt, ...) debug_print(qs->state, 4, fmt, __VA_ARGS__)
+#define DEBUG_LEVEL_2(fmt, ...) debugPrint(qs->state, 2, fmt, __VA_ARGS__)
+#define DEBUG_LEVEL_3(fmt, ...) debugPrint(qs->state, 3, fmt, __VA_ARGS__)
+#define DEBUG_LEVEL_4(fmt, ...) debugPrint(qs->state, 4, fmt, __VA_ARGS__)
 
 #endif //FAC_HEADERS

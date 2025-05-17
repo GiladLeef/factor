@@ -98,22 +98,22 @@ int readKeyValue(const char **argv, state *state) {
 	else if (cliParamMatch(key, "--demand", "-d") && getNum(value))
 		state->params.demand[0] = getNum(value);
 		// Quadratic Sieve specific parameters.
-#define QS_PARAM(name_1, name_2) \
+#define QSPARAM(name_1, name_2) \
     else if (cliParamMatch(key, "--qs-" #name_1, 0)) \
-        state->params.qs_##name_2 = getNum(value);
-	QS_PARAM(multiplier, multiplier)
-	QS_PARAM(base-size, base_size)
-	QS_PARAM(large-prime, large_prime)
-	QS_PARAM(alloc-mb, alloc_mb)
-	QS_PARAM(sieve, sieve)
-	QS_PARAM(sieve-cutoff, sieve_cutoff)
-	QS_PARAM(threshold, threshold)
-	QS_PARAM(error-bits, error_bits)
-	QS_PARAM(laziness, laziness)
-	QS_PARAM(tick-end, tick_end)
+        state->params.QS##name_2 = getNum(value);
+	QSPARAM(multiplier, multiplier)
+	QSPARAM(base-size, base_size)
+	QSPARAM(large-prime, large_prime)
+	QSPARAM(alloc-mb, alloc_mb)
+	QSPARAM(sieve, sieve)
+	QSPARAM(sieve-cutoff, sieve_cutoff)
+	QSPARAM(threshold, threshold)
+	QSPARAM(error-bits, errorBits)
+	QSPARAM(laziness, laziness)
+	QSPARAM(tick-end, tick_end)
 	else
 		return 0;
-#undef QS_PARAM
+#undef QSPARAM
 	*argv = *(argv + 1) = 0;
 	return 1;
 }
@@ -174,10 +174,10 @@ void random(cint_sheet *sheet, uint64_t *seed, cint *nums, char *comment, const 
 			} while (pow);
 		} else
 			cint_mul(N, P, A);
-		const int old_bits = bits_generated;
+		const int oldBits = bits_generated;
 		bits_generated = (int) cint_count_bits(A);
 		if (remaining_factors == 1 && bits_generated != bits_needed) {
-			bits_generated = old_bits;
+			bits_generated = oldBits;
 			goto retry;
 		}
 		TMP = A, A = N, N = TMP;
@@ -242,10 +242,10 @@ void generateInputFile(state *state) {
 			fprintf(fp, "%-*s # %d bits with %d factors%s\n", max_len, buf, (int) bits, n_factors, comment);
 			fflush(fp);
 			if (state->params.tty && state->params.verbose)
-				display_progress("Factorization file preparation", (double) i * 100.0 / (double) count);
+				displayProgress("Factorization file preparation", (double) i * 100.0 / (double) count);
 		} while (bits += step, ++i < count);
 		if (state->params.tty && state->params.verbose)
-			display_progress(0, 100);
+			displayProgress(0, 100);
 		fclose(fp);
 		for (i = 0; i < 3; ++i)
 			free(nums[i].mem);
@@ -320,7 +320,7 @@ uint64_t getTime(void) {
 	return (uint64_t) time.tv_sec * 1000 + (uint64_t) time.tv_usec / 1000;
 }
 
-void debug_print(const state *state, int level, const char *format, ...) {
+void debugPrint(const state *state, int level, const char *format, ...) {
 	if (level <= state->params.verbose) {
 		va_list args;
 		va_start(args, format);
@@ -330,7 +330,7 @@ void debug_print(const state *state, int level, const char *format, ...) {
 	}
 }
 
-void display_progress(const char *name, double percentage) {
+void displayProgress(const char *name, double percentage) {
 	static int chars = 0;
 	if (percentage < 100.)
 		// Print a progression percentage.
@@ -351,7 +351,7 @@ void manager_add_factor(state *state, const cint *num, int pow, int is_prime) {
 	cint_dup(&state->session.res[i].num, num);
 	state->session.res[i].power = state->session.power * pow;
 	if (0 < is_prime && !cint_is_prime(state->session.sheet, num, -1, state->session.seed)) {
-		debug_print(state, 3, "[x] Maintenance challenges %s's primality test.\n", cintString(state, num));
+		debugPrint(state, 3, "[x] Maintenance challenges %s's primality test.\n", cintString(state, num));
 		is_prime = -1 ; // [MATH INSURANCE] Re-factor this number due to conflicting Miller-Rabin tests.
 	}
 	state->session.res[i].prime = is_prime; // Possible values are: -1 (must factorize), 0 (not prime), and 1 (prime).
@@ -484,7 +484,7 @@ int factor(state *state) {
 		start :;
 		bits = (int) cint_count_bits(&state->session.num);
 		if (state->params.tty && state->params.verbose)
-			display_progress(0, 100);
+			displayProgress(0, 100);
 		if (bits < 65) {
 			// 64-bit simple Pollard's Rho.
 			if (1 < bits || start_idx == 0)
@@ -653,7 +653,7 @@ void output_default(state *state, int has_prev, int has_next, int status) {
 void output(state *state, int status) {
 	const int has_prev = state->scale.row_idx != 0, has_next = state->scale.row_idx + 1 != state->scale.total_rows;
 	if (state->params.tty && state->params.verbose)
-		display_progress(0, 100);
+		displayProgress(0, 100);
 	switch (state->params.output_format) {
 		case 'c' : case 'C' : output_csv(state, has_prev, has_next, status); break;
 		case 'J' : case 'j' : output_json(state, has_prev, has_next, status); break;
@@ -661,7 +661,7 @@ void output(state *state, int status) {
 	}
 	++state->scale.row_idx; // Update the index after each factorization.
 	if (state->params.tty && state->params.verbose)
-		display_progress("Overall Progress", (double) state->scale.row_idx / (double) state->scale.total_rows * 100.0);
+		displayProgress("Overall Progress", (double) state->scale.row_idx / (double) state->scale.total_rows * 100.0);
 	fflush(state->out);
 }
 

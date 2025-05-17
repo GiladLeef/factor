@@ -201,7 +201,7 @@ void lanczos_combine_cols(QSSheet *qs, uint64_t *x, uint64_t *v, uint64_t *ax, u
 void lanczos_build_array(QSSheet *qs, uint64_t **target, const size_t quantity, const size_t size) {
 	// ensure it remains memory for linear algebra
 	const char *mem_needs = (char *) qs->mem.now + quantity * size * sizeof(uint64_t);
-	const char *mem_ends = (char *) qs->mem.now + qs->mem.bytes_allocated;
+	const char *mem_ends = (char *) qs->mem.now + qs->mem.bytesAllocated;
 	assert(mem_needs < mem_ends);
 	for (size_t i = 0; i < quantity; ++i)
 		target[i] = qs->mem.now, qs->mem.now = memAligned(target[i] + size);
@@ -209,7 +209,7 @@ void lanczos_build_array(QSSheet *qs, uint64_t **target, const size_t quantity, 
 
 uint64_t *lanczos_block_worker(QSSheet *qs) {
 	const uint32 n_cols = qs->relations.length.now, v_size = n_cols > qs->base.length ? n_cols : qs->base.length;
-	const uint64_t safe_size = qs->lanczos.safe_length;
+	const uint64_t safe_size = qs->lanczos.safeLength;
 	uint64_t *md[6], *xl[2], *sm[13], *tmp, *res, mask_0, mask_1;
 	uint32 i, dim_0, dim_1;
 	qs->mem.now = memAligned((uint64_t *) qs->mem.now + 1); // keep some padding.
@@ -228,7 +228,7 @@ uint64_t *lanczos_block_worker(QSSheet *qs) {
 	lanczos_mul_MxN_Nx64(qs, md[1], v_size, xl[1]);
 	lanczos_mul_trans_MxN_Nx64(qs, xl[1], md[1]);
 	memcpy(xl[0], md[1], v_size * sizeof(uint64_t));
-	qs->lanczos.n_iterations = 0 ;
+	qs->lanczos.nIterations = 0 ;
 	do {
 		lanczos_mul_MxN_Nx64(qs, md[1], v_size, xl[1]);
 		lanczos_mul_trans_MxN_Nx64(qs, xl[1], md[4]);
@@ -273,7 +273,7 @@ uint64_t *lanczos_block_worker(QSSheet *qs) {
 				dim_1 = dim_0;
 			}
 		}
-	} while (++qs->lanczos.n_iterations < 2048 && dim_0 && i != 64);
+	} while (++qs->lanczos.nIterations < 2048 && dim_0 && i != 64);
 
 	// it sometimes succeeds at 700+ iterations during the tests.
 
@@ -283,7 +283,7 @@ uint64_t *lanczos_block_worker(QSSheet *qs) {
 
 	*res = 0; // mask
 
-	if (qs->lanczos.n_iterations < 2048) {
+	if (qs->lanczos.nIterations < 2048) {
 		lanczos_mul_MxN_Nx64(qs, md[0], v_size, md[3]);
 		lanczos_mul_MxN_Nx64(qs, md[1], v_size, md[2]);
 		lanczos_combine_cols(qs, md[0], md[1], md[3], md[2]);
@@ -309,7 +309,7 @@ void lanczos_reduce_matrix(QSSheet *qs) {
 		for (a = 0; a < qs->relations.length.now; ++a) {
 			// "snapshot" pointers, so they can be restored if "sieve again" is fired.
 			qs->lanczos.snapshot[a].relation = qs->relations.data[a];
-			qs->lanczos.snapshot[a].y_length = qs->relations.data[a]->Y.length;
+			qs->lanczos.snapshot[a].yLength = qs->relations.data[a]->Y.length;
 		}
 	for (a = 0; a < qs->relations.length.now; ++a)
 		for (b = 0; b < qs->relations.data[a]->Y.length; ++b)
@@ -342,19 +342,19 @@ void lanczos_reduce_matrix(QSSheet *qs) {
 	DEBUG_LEVEL_4("[x] Maintenance of linear algebra reduces the relations from %u to %u.\n", qs->relations.length.prev, qs->relations.length.now);
 }
 
-uint64_t *block_lanczos(QSSheet *qs) {
+uint64_t *blockLanczos(QSSheet *qs) {
 	// the worker algorithm is probabilistic with high success rate.
 	// it is interested in the Y field of the relations (to build its matrix).
 	// it receives as input the relations (reduced or not, depending on the settings).
 
-	if (qs->time.tick == qs->state->params.qs_tick_end)
+	if (qs->time.tick == qs->state->params.QStick_end)
 		return qs->mem.now ; // used for testing during the development.
 
-	if (qs->lanczos.safe_length < qs->relations.length.now)
-		qs->lanczos.safe_length = qs->relations.length.now;
-	if (qs->lanczos.safe_length < qs->base.length)
-		qs->lanczos.safe_length = qs->base.length;
-	qs->lanczos.safe_length += 64 - qs->lanczos.safe_length % 64;
+	if (qs->lanczos.safeLength < qs->relations.length.now)
+		qs->lanczos.safeLength = qs->relations.length.now;
+	if (qs->lanczos.safeLength < qs->base.length)
+		qs->lanczos.safeLength = qs->base.length;
+	qs->lanczos.safeLength += 64 - qs->lanczos.safeLength % 64;
 	//
 	const uint32 tries = 5, reduce_at = 3;
 	uint64_t *res;
@@ -368,7 +368,7 @@ uint64_t *block_lanczos(QSSheet *qs) {
 		res = lanczos_block_worker(qs);
 		if(*res) {
 			const char *ord = i == 0 ? "st" : i == 1 ? "nd" : i == 2 ? "rd" : "th" ;
-			DEBUG_LEVEL_4("Linear algebra passed on %u%s attempt after %u iterations.\n", i + 1, ord, qs->lanczos.n_iterations);
+			DEBUG_LEVEL_4("Linear algebra passed on %u%s attempt after %u iterations.\n", i + 1, ord, qs->lanczos.nIterations);
 			break;
 		}
 	}

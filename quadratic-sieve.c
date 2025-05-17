@@ -26,7 +26,7 @@ int quadraticSieve(state * state, int bits) {
 			iterationPart1(&qs, &qs.poly.D, &qs.poly.A);
 			iterationPart2(&qs, &qs.poly.A, &qs.poly.B);
 			iterationPart3(&qs, &qs.poly.A, &qs.poly.B);
-			for (uint32 i = 0, addi, *corr; i < qs.poly.gray_max && qs.nBits != 1; ++i, ++qs.poly.curves) {
+			for (uint32 i = 0, addi, *corr; i < qs.poly.grayMax && qs.nBits != 1; ++i, ++qs.poly.curves) {
 				addi = iterationPart4(&qs, i, &corr, &qs.poly.B);
 				iterationPart5(&qs, &qs.constants.kN, &qs.poly.B);
 				iterationPart6(&qs, &qs.constants.kN, &qs.poly.A, &qs.poly.B, &qs.poly.C);
@@ -36,7 +36,7 @@ int quadraticSieve(state * state, int bits) {
 			}
 		} while (innerContinuationCondition(&qs));
 		// Analyzes all observations made by the algorithm.
-		factorizeUsingNullVectors(&qs, block_lanczos(&qs));
+		factorizeUsingNullVectors(&qs, blockLanczos(&qs));
 	} while (outerContinuationCondition(&qs));
 	const int res = processRemainingFactors(&qs);
 	free(qs.mem.base);
@@ -53,11 +53,11 @@ int innerContinuationCondition(QSSheet *qs) {
 	answer &= qs->nBits != 1 ; // the bit count of N may have changed.
 	answer &= (qs->relations.length.peak = qs->relations.length.now) < qs->relations.length.needs; // the condition.
 	answer &= !qs->time.end || qs->time.tick % 16 == 1 || qs->time.now < qs->time.end ;
-	answer &= qs->time.tick != qs->state->params.qs_tick_end ;
+	answer &= qs->time.tick != qs->state->params.QStick_end ;
 	const double pct = .01 * (10000 * qs->relations.length.now / qs->relations.length.needs) ;
 	if (pct != qs->time.prev_pct) {
 		if (qs->state->params.tty && qs->state->params.verbose)
-			display_progress("Quadratic Sieve", pct); // progress isn't linear.
+			displayProgress("Quadratic Sieve", pct); // progress isn't linear.
 		else if ((uint32)qs->time.prev_pct != (uint32)pct)
 			DEBUG_LEVEL_4("%s", answer && !(qs->time.prev_pct < 50. && 50. <= pct) ? "." : ".\n");
 		qs->time.prev_pct = pct;
@@ -72,9 +72,9 @@ int outerContinuationCondition(QSSheet *qs) {
 	int answer = 1 ;
 	answer &= qs->nBits != 1 ; // the bit count of N isn't 1.
 	answer &= qs->sieveAgainPerms-- != 0 ; // avoid infinite loop.
-	answer &= qs->divisors.total_primes == 0 ; // search prime factors.
+	answer &= qs->divisors.totalPrimes == 0 ; // search prime factors.
 	answer &= !qs->time.end || getTime() < qs->time.end ;
-	answer &= qs->time.tick != qs->state->params.qs_tick_end ;
+	answer &= qs->time.tick != qs->state->params.QStick_end ;
 	if (answer) {
 		uint32 new_needs = qs->relations.length.needs;
 		new_needs += new_needs >> (2 + qs->sieveAgainPerms);
@@ -94,54 +94,54 @@ void parametrize(QSSheet *qs) {
 	uint64 tmp ;
 	// params as { bits, value } take the extremal value if bits exceed.
 	static const double param_base_size [][2]= { {135, 1300}, {165, 4200}, {200, 10000}, {260, 20000}, {330, 55000}, {0} };
-	qs->base.length = (tmp = qs->state->params.qs_base_size) ? tmp : linearParamResolution(param_base_size, bits);
+	qs->base.length = (tmp = qs->state->params.QSbase_size) ? tmp : linearParamResolution(param_base_size, bits);
 
 	static const double param_laziness [][2]= {{150, 95}, {220, 100}, {0} };
 	// collecting more/fewer relations than recommended (in percentage).
-	qs->relations.length.needs = qs->base.length * ((tmp = qs->state->params.qs_laziness) ? tmp : linearParamResolution(param_laziness, bits)) / 100;
+	qs->relations.length.needs = qs->base.length * ((tmp = qs->state->params.QSlaziness) ? tmp : linearParamResolution(param_laziness, bits)) / 100;
 	DEBUG_LEVEL_4("The algorithm use the seed %" PRIu64 " and targets %u relations.\n", qs->state->params.rand.custom, qs->relations.length.needs);
 
 	static const double param_m_value [][2]= { {120, 1}, {330, 6}, {0} };
-	qs->m.length = (qs->m.length_half = (qs->state->params.qs_sieve ? qs->state->params.qs_sieve : 31744) * linearParamResolution(param_m_value, bits)) << 1;
+	qs->m.length = (qs->m.lengthHalf = (qs->state->params.QSsieve ? qs->state->params.QSsieve : 31744) * linearParamResolution(param_m_value, bits)) << 1;
 
-	qs->m.cache_size = 95232 ; // algorithm reaches "M length" by steps of "cache size".
+	qs->m.cacheSize = 95232 ; // algorithm reaches "M length" by steps of "cache size".
 
 	static const double param_error [][2]= { {120, 15}, {330, 35}, {0} };
 	// Logarithms of primes are rounded and errors accumulate; this specifies the magnitude of the error.
-	qs->error_bits = (tmp = qs->state->params.qs_error_bits) ? tmp : linearParamResolution(param_error, bits);
+	qs->errorBits = (tmp = qs->state->params.QSerrorBits) ? tmp : linearParamResolution(param_error, bits);
 
 	static const double param_threshold [][2]= { {120, 60}, {330, 110}, {0} };
 	// The threshold that the sieve value must exceed to be considered smooth.
-	qs->threshold.value = (tmp = qs->state->params.qs_threshold) ? tmp : linearParamResolution(param_threshold, bits);
+	qs->threshold.value = (tmp = qs->state->params.QSthreshold) ? tmp : linearParamResolution(param_threshold, bits);
 
 	// A good multiplier reduces memory usage up to twice.
 	static const double param_alloc [][2]= { {130, 992}, {140, 1280}, {150, 2176}, {160, 3584}, {170, 7168}, {180, 12288}, {190, 14336}, {190, 14336}, {200, 24576}, {210, 30720}, {220, 40960}, {230, 49152}, {240, 57344}, {250, 67584}, {260, 81920}, {270, 98304}, {280, 114688}, {290, 122880}, {300, 139264}, {310, 163840}, {320, 196608}, {330, 229376}, {0} };
-	qs->mem.bytes_allocated = (tmp = qs->state->params.qs_alloc_mb) ? tmp << 20 : linearParamResolution(param_alloc, qs->knBits) << 10;
+	qs->mem.bytesAllocated = (tmp = qs->state->params.QSalloc_mb) ? tmp << 20 : linearParamResolution(param_alloc, qs->knBits) << 10;
 
 	qs->sieveAgainPerms = 3; // Sieve again up to 3 times before giving up
 
 	// Iterative list
-	qs->iterative_list[0] = 1; // one
+	qs->iterativeList[0] = 1; // one
 	static const double param_first_prime [][2] = { {170, 8}, {210, 12}, {320, 40}, {0} };
-	qs->iterative_list[1] = linearParamResolution(param_first_prime, bits); // first
-	tmp = qs->state->params.qs_sieve_cutoff ? qs->state->params.qs_sieve_cutoff : 5120 ;
+	qs->iterativeList[1] = linearParamResolution(param_first_prime, bits); // first
+	tmp = qs->state->params.QSsieve_cutoff ? qs->state->params.QSsieve_cutoff : 5120 ;
 	const uint32 large_base = tmp < qs->base.length ? tmp : qs->base.length;
-	qs->iterative_list[2] = large_base >> 2; // medium
-	qs->iterative_list[3] = large_base >> 1; // mid
-	qs->iterative_list[4] = large_base; // sec
+	qs->iterativeList[2] = large_base >> 2; // medium
+	qs->iterativeList[3] = large_base >> 1; // mid
+	qs->iterativeList[4] = large_base; // sec
 
-	DEBUG_LEVEL_4("The iterative list contains %u, %u, %u and %u.\n", qs->iterative_list[1], qs->iterative_list[2], qs->iterative_list[3], qs->iterative_list[4]);
+	DEBUG_LEVEL_4("The iterative list contains %u, %u, %u and %u.\n", qs->iterativeList[1], qs->iterativeList[2], qs->iterativeList[3], qs->iterativeList[4]);
 
 	const uint64 last_prime_in_base = (uint64) (qs->base.length * 2.5 * log(qs->base.length));
-	qs->relations.too_large_prime = (tmp = qs->state->params.qs_large_prime) ? tmp : last_prime_in_base << 4;
+	qs->relations.tooLargePrime = (tmp = qs->state->params.QSlarge_prime) ? tmp : last_prime_in_base << 4;
 
 	if (155 < qs->knBits)
-		DEBUG_LEVEL_4("The single large-prime variation is being processed under %" PRIu64 ".\n", qs->relations.too_large_prime);
+		DEBUG_LEVEL_4("The single large-prime variation is being processed under %" PRIu64 ".\n", qs->relations.tooLargePrime);
 
-	qs->s.values.double_value = (qs->s.values.defined = (qs->s.values.subtract_one = bits / 28) + 1) << 1;
-	qs->poly.gray_max = 1 << (qs->s.values.defined - 3); // computing the roots of f(x) once for all these polynomials.
+	qs->s.values.doubleValue = (qs->s.values.defined = (qs->s.values.subtractOne = bits / 28) + 1) << 1;
+	qs->poly.grayMax = 1 << (qs->s.values.defined - 3); // computing the roots of f(x) once for all these polynomials.
 
-	DEBUG_LEVEL_4("Other params include sieve=%u, error_bits=%u, threshold=%u and s=%u.\n", qs->m.length_half, qs->error_bits, qs->threshold.value, qs->s.values.defined);
+	DEBUG_LEVEL_4("Other params include sieve=%u, errorBits=%u, threshold=%u and s=%u.\n", qs->m.lengthHalf, qs->errorBits, qs->threshold.value, qs->s.values.defined);
 
 	// The algorithm itself completes its configuration during the last preparation part.
 	assert(qs->s.values.defined >= 3);
@@ -205,7 +205,7 @@ void adjustInputSize(QSSheet *qs) {
 void selectMultiplier(QSSheet *qs) {
 	// Frequently select a small multiplier (under 8-bit) that will save time and memory.
 	// After it, the algorithm will factor kN instead of N, where k is a constant named "multiplier".
-	const uint32 mul = (uint32) qs->state->params.qs_multiplier ;
+	const uint32 mul = (uint32) qs->state->params.QSmultiplier ;
 	if (mul){
 		DEBUG_LEVEL_4("The multiplier is %u.\n", mul);
 		qs->multiplier = mul ;
@@ -328,7 +328,7 @@ void scoreAlternativeMultipliers(QSSheet *qs, uint32 *caller_res, const size_t c
 
 void allocateMemory(QSSheet *qs) {
 	void *mem;
-	mem = qs->mem.base = calloc(1, qs->mem.bytes_allocated);
+	mem = qs->mem.base = calloc(1, qs->mem.bytesAllocated);
 	assert(mem);
 
 	// kN has been prepared in the manager memory, now the QS has been parameterized and allocated.
@@ -338,34 +338,34 @@ void allocateMemory(QSSheet *qs) {
 
 	DEBUG_LEVEL_4("The underlying calculations use %u-bit variables.\n", (unsigned)(vars_size * cint_exponent));
 
-	const size_t buffers_size = qs->base.length + (qs->iterative_list[1] << 1);
+	const size_t buffers_size = qs->base.length + (qs->iterativeList[1] << 1);
 	// more relation pointers than "guessed" are available (sieve again feature).
 	const size_t relations_size = (qs->base.length < qs->relations.length.needs ? qs->relations.length.needs : qs->base.length) * 7 / 4 ;
 
 	{
 		// list of the numbers used by the algorithm
 		cint * const n[] = {
-				&qs->vars.N,
+				&qs->vars.n,
 				// polynomial
 				&qs->poly.A,
 				&qs->poly.B,
 				&qs->poly.C,
 				&qs->poly.D,
 				// temporary
-				&qs->vars.TEMP[0], &qs->vars.TEMP[1], &qs->vars.TEMP[2], &qs->vars.TEMP[3], &qs->vars.TEMP[4],
+				&qs->vars.temp[0], &qs->vars.temp[1], &qs->vars.temp[2], &qs->vars.temp[3], &qs->vars.temp[4],
 				// relations finder
-				&qs->vars.X,
-				&qs->vars.KEY,
-				&qs->vars.VALUE,
-				&qs->vars.CYCLE,
+				&qs->vars.x,
+				&qs->vars.key,
+				&qs->vars.value,
+				&qs->vars.cycle,
 				// a factor of N
-				&qs->vars.FACTOR,
+				&qs->vars.factor,
 				// constants
 				&qs->constants.kN,
-				&qs->constants.ONE,
-				&qs->constants.M_HALF,
-				&qs->constants.TOO_LARGE_PRIME,
-				&qs->constants.MULTIPLIER,
+				&qs->constants.one,
+				&qs->constants.mHalf,
+				&qs->constants.tooLargePrime,
+				&qs->constants.multiplier,
 				0,
 		};
 		for (int i = 0; n[i]; ++i) {
@@ -374,26 +374,26 @@ void allocateMemory(QSSheet *qs) {
 		}
 	}
 
-	cint_dup(&qs->vars.N, &qs->state->session.num);
+	cint_dup(&qs->vars.n, &qs->state->session.num);
 	cint_dup(&qs->constants.kN, qs->state->session.tmp);
 
-	intToCint(&qs->constants.ONE, 1);
-	intToCint(&qs->constants.M_HALF, qs->m.length_half);
-	intToCint(&qs->constants.TOO_LARGE_PRIME, qs->relations.too_large_prime);
-	intToCint(&qs->constants.MULTIPLIER, qs->multiplier);
+	intToCint(&qs->constants.one, 1);
+	intToCint(&qs->constants.mHalf, qs->m.lengthHalf);
+	intToCint(&qs->constants.tooLargePrime, qs->relations.tooLargePrime);
+	intToCint(&qs->constants.multiplier, qs->multiplier);
 
 	// Allocates "s" rows
 	qs->s.data = memAligned(mem);
 	mem = memAligned(qs->s.data + qs->s.values.defined);
 	for (uint32 i = 0; i < qs->s.values.defined; ++i) {
-		inlineCint(&qs->s.data[i].B_terms, kn_size, &mem); // also "s" more cint
-		qs->s.data[i].A_inv_double_value_B_terms = mem;
-		mem = memAligned(qs->s.data[i].A_inv_double_value_B_terms + qs->base.length);
+		inlineCint(&qs->s.data[i].bTerms, kn_size, &mem); // also "s" more cint
+		qs->s.data[i].aInvDoubleValueBTerms = mem;
+		mem = memAligned(qs->s.data[i].aInvDoubleValueBTerms + qs->base.length);
 	}
-	qs->s.A_indexes = memAligned(mem); // the indexes of the prime numbers that compose A.
+	qs->s.aIndexes = memAligned(mem); // the indexes of the prime numbers that compose A.
 
 	// Allocates "base length" rows
-	qs->base.data = memAligned(qs->s.A_indexes + qs->s.values.double_value);
+	qs->base.data = memAligned(qs->s.aIndexes + qs->s.values.doubleValue);
 	qs->m.positions[0] = memAligned(qs->base.data + qs->base.length);
 	qs->m.positions[1] = memAligned(qs->m.positions[0] + qs->base.length);
 	qs->m.sieve = memAligned(qs->m.positions[1] + qs->base.length);
@@ -420,14 +420,14 @@ void allocateMemory(QSSheet *qs) {
 		qs->uniqueness[i].comparator = (int (*)(const void *, const void *)) &h_cint_compare;
 		// they use default sign-less comparator.
 	}
-	avl_at(&qs->uniqueness[2], &qs->constants.ONE); // Ignore 1 as a divisor of N.
-	DEBUG_LEVEL_4("Allocated %u MB of memory with a %u KB structure.\n", qs->mem.bytes_allocated >> 20, (unsigned)((char*)qs->mem.now - (char*)qs->mem.base) >> 10);
+	avl_at(&qs->uniqueness[2], &qs->constants.one); // Ignore 1 as a divisor of N.
+	DEBUG_LEVEL_4("Allocated %u MB of memory with a %u KB structure.\n", qs->mem.bytesAllocated >> 20, (unsigned)((char*)qs->mem.now - (char*)qs->mem.base) >> 10);
 }
 
 void generateFactorBase(QSSheet *qs) {
 	// Prepare the factor base (a set of small prime numbers used to find smooth numbers).
 	static const double inv_ln_2 = 1.4426950408889634;
-	cint *A = qs->vars.TEMP, *B = A + 1, *C = A + 2;
+	cint *A = qs->vars.temp, *B = A + 1, *C = A + 2;
 	uint32 i = 0, prime;
 
 	// the factor base contain the multiplier if different from 2.
@@ -436,7 +436,7 @@ void generateFactorBase(QSSheet *qs) {
 
 	// then it contains the number 2.
 	qs->base.data[i].num = 2, qs->base.data[i].size = 1;
-	qs->base.data[i].sqrt_kN_mod_prime = *qs->constants.kN.mem % 8 == 1 || *qs->constants.kN.mem % 8 == 7, ++i;
+	qs->base.data[i].sqrtKNModPrime = *qs->constants.kN.mem % 8 == 1 || *qs->constants.kN.mem % 8 == 7, ++i;
 
 	// then the prime numbers for which kN is a quadratic residue modulo.
 	for (prime = 3; i < qs->base.length; prime += 2)
@@ -444,8 +444,8 @@ void generateFactorBase(QSSheet *qs) {
 			intToCint(A, prime);
 			cint_div(qs->sheet, &qs->constants.kN, A, B, C);
 			const uint32 kn_mod_prime = (uint32) cintToInt(C);
-			qs->base.data[i].sqrt_kN_mod_prime = tonelliShanks(kn_mod_prime, prime);
-			if (qs->base.data[i].sqrt_kN_mod_prime) {
+			qs->base.data[i].sqrtKNModPrime = tonelliShanks(kn_mod_prime, prime);
+			if (qs->base.data[i].sqrtKNModPrime) {
 				qs->base.data[i].num = prime;
 				qs->base.data[i].size = (uint32) (.35 + inv_ln_2 * log(prime)), ++i;
 			}
@@ -462,12 +462,12 @@ void setupPolynomialParameters(QSSheet *qs) {
 	uint32 i, min, span;
 	const uint32 s = qs->s.values.defined ;
 	qs->poly.span.half = (span = qs->base.length / (s * (s + s))) >> 1;
-	cint *kN = qs->vars.TEMP, *TMP = kN + 1, *R = kN + 2;
+	cint *kN = qs->vars.temp, *TMP = kN + 1, *R = kN + 2;
 	cint_dup(kN, &qs->constants.kN);
 	cint_left_shifti(kN, 1);
 	cint_sqrt(qs->sheet, kN, TMP, R);
-	cint_div(qs->sheet, TMP, &qs->constants.M_HALF, &qs->poly.D, R);
-	qs->poly.d_bits = (uint32) cint_count_bits(&qs->poly.D);
+	cint_div(qs->sheet, TMP, &qs->constants.mHalf, &qs->poly.D, R);
+	qs->poly.dBits = (uint32) cint_count_bits(&qs->poly.D);
 	cint_nthRoot(qs->sheet, &qs->poly.D, s, R); // use the s-th root of D.
 	const uint32 root = (uint32) cintToInt(R) ;
 	for (i = 1; qs->base.data[i].num <= root; ++i, assert(i < qs->base.length));
@@ -477,10 +477,10 @@ void setupPolynomialParameters(QSSheet *qs) {
 	}
 	assert(i >= span);
 	for (min = i - qs->poly.span.half, i *= i; i / min < span + min; --min);
-	qs->poly.span.x_1 = min ;
-	qs->poly.span.x_2 = min + qs->poly.span.half ;
-	qs->poly.span.x_3 = qs->poly.span.x_2 * qs->poly.span.x_2 ;
-	assert(qs->poly.span.x_2 < qs->base.length);
+	qs->poly.span.x1 = min ;
+	qs->poly.span.x2 = min + qs->poly.span.half ;
+	qs->poly.span.x3 = qs->poly.span.x2 * qs->poly.span.x2 ;
+	assert(qs->poly.span.x2 < qs->base.length);
 }
 
 void getStartedIteration(QSSheet *qs) {
@@ -490,7 +490,7 @@ void getStartedIteration(QSSheet *qs) {
 		uint32 i ;
 		for(i = 0; qs->lanczos.snapshot[i].relation; ++i) {
 			qs->relations.data[i] = qs->lanczos.snapshot[i].relation;
-			qs->relations.data[i]->Y.length = qs->lanczos.snapshot[i].y_length;
+			qs->relations.data[i]->Y.length = qs->lanczos.snapshot[i].yLength;
 			qs->lanczos.snapshot[i].relation = 0 ;
 		}
 		assert(qs->relations.length.prev == i) ;
@@ -502,7 +502,7 @@ void getStartedIteration(QSSheet *qs) {
 		if (qs->relations.length.prev == qs->relations.length.now) {
 			// The algorithm notices that no relations accumulates, and reacts to unblock the situation.
 			DEBUG_LEVEL_3("[x] Maintenance randomizes D because the relation counter remains at %u.\n", qs->relations.length.now);
-			cint_random_bits(&qs->poly.D, qs->poly.d_bits, qs->seed);
+			cint_random_bits(&qs->poly.D, qs->poly.dBits, qs->seed);
 			*qs->poly.D.mem |= 1; // Shouldn't happen, D becomes a randomized odd number.
 		}
 		qs->relations.length.prev = qs->relations.length.now;
@@ -513,16 +513,13 @@ void iterationPart1(QSSheet * qs, const cint * D, cint * A) {
 	uint32 n_tries = 0 ; // several attempts may rarely be necessary.
 	retry:;
 	// A is a "random" product of "s" distinct prime numbers from the factor base.
-	cint * X = qs->vars.TEMP, * Y = X + 1, *TMP, *_A = A ;
+	cint * X = qs->vars.temp, * Y = X + 1, *TMP, *_A = A ;
 	uint32 a, b, i = 0, j;
 	if (qs->s.values.defined & 1) TMP = A, A = X, X = TMP ;
 	// swap pointers so the last multiplication completes inside the A variable.
 	intToCint(A, 1);
-	for (a = 0, b = qs->poly.span.x_3; a < qs->s.values.subtract_one; ++a) {
-		if (a & 1) i = b / (i + qs->poly.span.x_1) - (uint32) xorRandint(qs->seed, 0, 9);
-		else i = qs->poly.span.x_2 + (uint32) xorRandint(qs->seed, 0, qs->poly.span.half);
-		for (j = 0; j < a; j = i == qs->s.data[j].prime_index ? ++i, 0 : j + 1);
-		qs->s.data[a].prime_index = i; // the selected divisor of A wasn't already present in the product.
+	for (a = 0, b = qs->poly.span.x3; a < qs->s.values.subtractOne; ++a) {
+				if (a & 1) i = b / (i + qs->poly.span.x1) - (uint32) xorRandint(qs->seed, 0, 9);		else i = qs->poly.span.x2 + (uint32) xorRandint(qs->seed, 0, qs->poly.span.half);		for (j = 0; j < a; j = i == qs->s.data[j].primeIndex ? ++i, 0 : j + 1);		qs->s.data[a].primeIndex = i; // the selected divisor of A wasn't already present in the product.
 		intToCint(Y, qs->base.data[i].num);
 		cint_mul(A, Y, X), TMP = A, A = X, X = TMP;
 	}
@@ -530,7 +527,7 @@ void iterationPart1(QSSheet * qs, const cint * D, cint * A) {
 	cint_div(qs->sheet, D, A, X, Y);
 	const uint32 d_over_a = (uint32) cintToInt(X);
 	for (i = qs->base.data[0].num != 2 ; qs->base.data[i].num <= d_over_a; ++i);
-	for (j = 0; j < qs->s.values.subtract_one; j = i == qs->s.data[j].prime_index ? ++i, 0 : j + 1);
+	for (j = 0; j < qs->s.values.subtractOne; j = i == qs->s.data[j].primeIndex ? ++i, 0 : j + 1);
 	if (qs->base.length <= i) {
 		const char *ord = n_tries == 0 ? "st" : n_tries == 1 ? "nd" : n_tries == 2 ? "rd" : "th" ;
 		DEBUG_LEVEL_3("[x] Maintenance discards A=%s on %u%s attempt.\n", cintString(qs->state, A), n_tries + 1, ord);
@@ -538,41 +535,41 @@ void iterationPart1(QSSheet * qs, const cint * D, cint * A) {
 		A = _A ;
 		goto retry;
 	}
-	qs->s.data[qs->s.values.subtract_one].prime_index = i ;
+	qs->s.data[qs->s.values.subtractOne].primeIndex = i ;
 	intToCint(Y, qs->base.data[i].num);
 	cint_mul(A, Y, X); // generated A values should always be distinct, A no longer change.
 	assert(X == &qs->poly.A);
 }
 
 void iterationPart2(QSSheet * qs, const cint * A, cint * B) {
-	cint *X = qs->vars.TEMP, *PRIME = X + 1, *Y = X + 2, *R = X + 3;
-	uint32 i, *pen = qs->s.A_indexes;
+	cint *X = qs->vars.temp, *PRIME = X + 1, *Y = X + 2, *R = X + 3;
+	uint32 i, *pen = qs->s.aIndexes;
 	cint_erase(B);
 	for (i = 0; i < qs->s.values.defined; ++i) {
-		const uint32 idx = qs->s.data[i].prime_index, prime = qs->base.data[idx].num;
-		if (idx >= qs->iterative_list[3])
-			qs->iterative_list[3] = 8 + idx - idx % 8 ;
+		const uint32 idx = qs->s.data[i].primeIndex, prime = qs->base.data[idx].num;
+		if (idx >= qs->iterativeList[3])
+			qs->iterativeList[3] = 8 + idx - idx % 8 ;
 		// write [index of prime number, power] of the A factors into buffer.
-		*pen++ = qs->s.data[i].prime_index, *pen++ = 1;
-		qs->s.data[i].prime_squared = (uint64)prime * (uint64)prime ;
+		*pen++ = qs->s.data[i].primeIndex, *pen++ = 1;
+		qs->s.data[i].primeSquared = (uint64)prime * (uint64)prime ;
 		intToCint(PRIME, prime);
 		cint_div(qs->sheet, A, PRIME, X, R), assert(R->mem == R->end); // div exact.
 		cint_div(qs->sheet, X, PRIME, Y, R);
-		qs->s.data[i].A_over_prime_mod_prime = (uint32) cintToInt(R);
-		uint64 x = modularInverse(qs->s.data[i].A_over_prime_mod_prime, prime);
-		x = x * qs->base.data[qs->s.data[i].prime_index].sqrt_kN_mod_prime % prime;
+		qs->s.data[i].aOverPrimeModPrime = (uint32) cintToInt(R);
+		uint64 x = modularInverse(qs->s.data[i].aOverPrimeModPrime, prime);
+		x = x * qs->base.data[qs->s.data[i].primeIndex].sqrtKNModPrime % prime;
 		intToCint(X, x > prime >> 1 ? prime - x : x);
 		cint_mul(A, X, Y);
-		cint_div(qs->sheet, Y, PRIME, &qs->s.data[i].B_terms, R), assert(R->mem == R->end); // div exact.
-		cint_addi(B, &qs->s.data[i].B_terms);
+		cint_div(qs->sheet, Y, PRIME, &qs->s.data[i].bTerms, R), assert(R->mem == R->end); // div exact.
+		cint_addi(B, &qs->s.data[i].bTerms);
 	}
 }
 
 void iterationPart3(QSSheet * qs, const cint * A, const cint * B) {
-	cint *Q = qs->vars.TEMP, *R = Q + 1, *PRIME = Q + 2;
+	cint *Q = qs->vars.temp, *R = Q + 1, *PRIME = Q + 2;
 	uint64 i, j, x, y;
 	for (i = 0; i < qs->base.length; ++i) {
-		// prepare the "roots" and "A_inv_double_value_B_terms". The algorithm will
+		// prepare the "roots" and "aInvDoubleValueBTerms". The algorithm will
 		// fill 2 ** (s - 3) sieves by using these values and adding "prime sizes".
 		const uint32 prime = qs->base.data[i].num;
 		intToCint(PRIME, prime);
@@ -580,15 +577,15 @@ void iterationPart3(QSSheet * qs, const cint * A, const cint * B) {
 		const uint32 a_mod_prime = (uint32) cintToInt(R) ;
 		cint_div(qs->sheet, B, PRIME, Q, R) ;
 		const uint32 b_mod_prime = (uint32) cintToInt(R) ;
-		const uint32 a_inv_double_value = modularInverse(a_mod_prime, prime) << 1 ;
+		const uint32 a_inv_doubleValue = modularInverse(a_mod_prime, prime) << 1 ;
 		// Arithmetic shifts "<<" and ">>" performs multiplication or division by powers of two.
 		x = y = prime;
-		x += qs->base.data[i].sqrt_kN_mod_prime;
-		y -= qs->base.data[i].sqrt_kN_mod_prime;
+		x += qs->base.data[i].sqrtKNModPrime;
+		y -= qs->base.data[i].sqrtKNModPrime;
 		x -= b_mod_prime;
-		x *= a_inv_double_value >> 1;
-		y *= a_inv_double_value ;
-		x += qs->m.length_half ;
+		x *= a_inv_doubleValue >> 1;
+		y *= a_inv_doubleValue ;
+		x += qs->m.lengthHalf ;
 		x %= prime ;
 		y += x ;
 		y %= prime ;
@@ -596,32 +593,32 @@ void iterationPart3(QSSheet * qs, const cint * A, const cint * B) {
 		qs->base.data[i].root[1] = (uint32) y ; // Second root of the polynomial mod prime.
 		for (j = 0; j < qs->s.values.defined; ++j) {
 			// compute the roots update value for all "s".
-			cint_div(qs->sheet, &qs->s.data[j].B_terms, PRIME, Q, R);
+			cint_div(qs->sheet, &qs->s.data[j].bTerms, PRIME, Q, R);
 			const uint64 b_term = cintToInt(R);
-			qs->s.data[j].A_inv_double_value_B_terms[i] = (uint32)(a_inv_double_value * b_term % prime);
+			qs->s.data[j].aInvDoubleValueBTerms[i] = (uint32)(a_inv_doubleValue * b_term % prime);
 		}
 	}
-	// The next function operates over "B_terms" multiplied by 2.
-	for (i = 0; i < qs->s.values.defined; cint_left_shifti(&qs->s.data[i++].B_terms, 1));
+	// The next function operates over "bTerms" multiplied by 2.
+	for (i = 0; i < qs->s.values.defined; cint_left_shifti(&qs->s.data[i++].bTerms, 1));
 }
 
 uint32 iterationPart4(const QSSheet * qs, const uint32 nth_curve, uint32 ** corr, cint *B) {
-	uint32 i, gray_act; // the Gray code in "nth_curve" indicates which "B_term" to consider.
+	uint32 i, gray_act; // the Gray code in "nth_curve" indicates which "bTerms" to consider.
 	for (i = 0; nth_curve >> i & 1; ++i);
 	if (gray_act = (nth_curve >> i & 2) != 0, gray_act)
-		cint_addi(B, &qs->s.data[i].B_terms) ;
+		cint_addi(B, &qs->s.data[i].bTerms) ;
 	else // and which action to perform.
-		cint_subi(B, &qs->s.data[i].B_terms) ;
-	*corr = qs->s.data[i].A_inv_double_value_B_terms;
+		cint_subi(B, &qs->s.data[i].bTerms) ;
+	*corr = qs->s.data[i].aInvDoubleValueBTerms;
 	return gray_act; // B values generated here should always be distinct.
 }
 
 void iterationPart5(QSSheet *  qs, const cint * kN, const cint * B) {
-	cint *P = qs->vars.TEMP, *Q = P + 1, *R_kN = P + 2, *R_B = P + 3, *TMP = P + 4;
+	cint *P = qs->vars.temp, *Q = P + 1, *R_kN = P + 2, *R_B = P + 3, *TMP = P + 4;
 	for (uint32 a = 0; a < qs->s.values.defined; ++a) {
-		const uint32 i = qs->s.data[a].prime_index;
+		const uint32 i = qs->s.data[a].primeIndex;
 		const int64 prime = qs->base.data[i].num ;
-		intToCint(P, qs->s.data[a].prime_squared);
+		intToCint(P, qs->s.data[a].primeSquared);
 		cint_div(qs->sheet, B, P, Q, R_B);
 		cint_div(qs->sheet, kN, P, Q, R_kN);
 		if (B->nat < 0) cint_addi(R_B, P); // if B is negative.
@@ -642,10 +639,10 @@ void iterationPart5(QSSheet *  qs, const cint * kN, const cint * B) {
 			if (Q->nat < 0) s = -s ;
 		}
 		//
-		int64 bezout = (rem_b % prime) * (int64) qs->s.data[a].A_over_prime_mod_prime ;
+		int64 bezout = (rem_b % prime) * (int64) qs->s.data[a].aOverPrimeModPrime ;
 		bezout = (int64) modularInverse((uint32) (bezout % prime), (uint32) prime);
 		//
-		s = (int64) qs->m.length_half - s * bezout ;
+		s = (int64) qs->m.lengthHalf - s * bezout ;
 		s %= prime ;
 		s += (s < 0) * prime ;
 		qs->base.data[i].root[0] = (uint32) s;
@@ -654,7 +651,7 @@ void iterationPart5(QSSheet *  qs, const cint * kN, const cint * B) {
 }
 
 void iterationPart6(QSSheet *qs, const cint *kN, const cint *A, const cint *B, cint *C) {
-	cint *TMP = qs->vars.TEMP, *R = TMP + 1;
+	cint *TMP = qs->vars.temp, *R = TMP + 1;
 	cint_mul(B, B, TMP); // (B * B) % A = kN % A
 	cint_subi(TMP, kN); // C = (B * B - kN) / A
 	cint_div(qs->sheet, TMP, A, C, R), assert(R->mem == R->end); // div exact.
@@ -665,7 +662,7 @@ void iterationPart7(QSSheet * qs, const uint32 gray_addi, const uint32 * restric
 	memset(qs->m.sieve, 0, qs->m.length * sizeof(*qs->m.sieve));
 	memset(qs->m.flags, 0, qs->base.length * sizeof(*qs->m.flags));
 	uint8 * restrict end = qs->m.sieve + qs->m.length, *p_0, *p_1;
-	for(uint32 i = qs->iterative_list[3], j = qs->iterative_list[4]; i < j; ++i) {
+	for(uint32 i = qs->iterativeList[3], j = qs->iterativeList[4]; i < j; ++i) {
 		const uint32 prime = qs->base.data[i].num, size = qs->base.data[i].size, co = gray_addi ? prime - corr[i] : corr[i];
 		qs->base.data[i].root[0] += co; if (qs->base.data[i].root[0] >= prime) qs->base.data[i].root[0] -= prime;
 		qs->base.data[i].root[1] += co; if (qs->base.data[i].root[1] >= prime) qs->base.data[i].root[1] -= prime;
@@ -675,7 +672,7 @@ void iterationPart7(QSSheet * qs, const uint32 gray_addi, const uint32 * restric
 			*p_0 += size, p_0 += prime, *p_1 += size, p_1 += prime;
 		*p_0 += (end > p_0) * size, *p_1 += (end > p_1) * size;
 	}
-	for(uint32 i = qs->iterative_list[4], j = qs->base.length; i < j; ++i){
+	for(uint32 i = qs->iterativeList[4], j = qs->base.length; i < j; ++i){
 		const uint32 prime = qs->base.data[i].num, size = qs->base.data[i].size, co = gray_addi ? prime - corr[i] : corr[i] ;
 		qs->base.data[i].root[0] += co; if (qs->base.data[i].root[0] >= prime) qs->base.data[i].root[0] -= prime;
 		qs->base.data[i].root[1] += co; if (qs->base.data[i].root[1] >= prime) qs->base.data[i].root[1] -= prime;
@@ -691,7 +688,7 @@ void iterationPart8(QSSheet * qs, const uint32 gray_addi, const uint32 *  corr) 
 	uint8 * sieve_end = chunk_begin + qs->m.length ;
 	uint32 *buffer = qs->buffer[0], walk_idx, * walk = buffer;
 	// Since the previous function, the check is performed for the prime numbers of the factor base.
-	for(uint32 i = 0; i < qs->iterative_list[3]; ++i)
+	for(uint32 i = 0; i < qs->iterativeList[3]; ++i)
 		if (qs->base.data[i].root[1] != (uint32) -1) {
 			*walk++ = i ; // the current prime number isn't a factor of A.
 			const uint32 prime = qs->base.data[i].num, co = gray_addi ? prime - corr[i] : corr[i] ;
@@ -700,12 +697,12 @@ void iterationPart8(QSSheet * qs, const uint32 gray_addi, const uint32 *  corr) 
 			qs->m.positions[0][i] = chunk_begin + qs->base.data[i].root[0];
 			qs->m.positions[1][i] = chunk_begin + qs->base.data[i].root[1];
 		}
-	for(walk_idx = 0; buffer[walk_idx] < qs->iterative_list[1]; ++walk_idx);
+	for(walk_idx = 0; buffer[walk_idx] < qs->iterativeList[1]; ++walk_idx);
 	do{ // iterates step by step until the entire sieve is filled.
 		walk = buffer + walk_idx ;
-		chunk_end = chunk_end + qs->m.cache_size < sieve_end ? chunk_end + qs->m.cache_size : sieve_end;
+		chunk_end = chunk_end + qs->m.cacheSize < sieve_end ? chunk_end + qs->m.cacheSize : sieve_end;
 		do{
-			const uint32 size = qs->base.data[*walk].size, prime = qs->base.data[*walk].num, times = 4 >> (*walk > qs->iterative_list[2]) ;
+			const uint32 size = qs->base.data[*walk].size, prime = qs->base.data[*walk].num, times = 4 >> (*walk > qs->iterativeList[2]) ;
 			uint8 ** const p_0 = qs->m.positions[0] + *walk, ** const p_1 = qs->m.positions[1] + *walk;
 			const int64 diff = *p_1 - *p_0 ;
 			for(const uint8 * const bound = chunk_end - prime * times; bound > *p_0;)
@@ -731,8 +728,8 @@ cint * divisorsUniquenessHelper(QSSheet * qs, const cint * num) {
 int registerDivisor(QSSheet *qs) {
 	// Register a divisor of N, combine them with GCD and identify the perfect powers.
 	// Returns 0 when the factorization is completed, 1 otherwise.
-#define IN_RANGE(F) (h_cint_compare(&qs->constants.ONE, F) < 0 && h_cint_compare(F, &qs->vars.N) < 0)
-	cint *F = &qs->vars.FACTOR, *tmp;
+#define IN_RANGE(F) (h_cint_compare(&qs->constants.one, F) < 0 && h_cint_compare(F, &qs->vars.n) < 0)
+	cint *F = &qs->vars.factor, *tmp;
 	F->nat = 1 ; // Absolute value.
 	if (!(IN_RANGE(F) && (tmp = divisorsUniquenessHelper(qs, F))))
 		return 1; // Duplicates are ignored.
@@ -740,17 +737,17 @@ int registerDivisor(QSSheet *qs) {
 		cint * num ;
 		char origin ;
 	} tasks[63] ; // Implements a stack-based recursion.
-	cint *curr, **divisors = qs->divisors.data, *Q = qs->vars.TEMP + 3, *R = Q + 1;
+	cint *curr, **divisors = qs->divisors.data, *Q = qs->vars.temp + 3, *R = Q + 1;
 	int i = 0, pow;
 	tasks[i++] = (struct task) {tmp, 0};
 	DEBUG_LEVEL_4("- New divisor %s shown.\n", cintString(qs->state, tmp));
 	do {
 		curr = tasks[--i].num; // Retrieve the top element.
 		if (cint_is_prime(qs->sheet, curr, -1, qs->seed)) {
-			pow = (int) cint_remove(qs->sheet, &qs->vars.N, curr);
+			pow = (int) cint_remove(qs->sheet, &qs->vars.n, curr);
 			assert(pow); // Prime factors are removed from N.
-			++qs->divisors.total_primes;
-			qs->nBits = (uint32) cint_count_bits(&qs->vars.N);
+			++qs->divisors.totalPrimes;
+			qs->nBits = (uint32) cint_count_bits(&qs->vars.n);
 			// Register this prime factor in the manager's routine.
 			manager_add_factor(qs->state, curr, pow, 1);
 			if (tasks[i].origin) {
@@ -766,7 +763,7 @@ int registerDivisor(QSSheet *qs) {
 			}
 			if (qs->nBits != 1) {
 				DEBUG_LEVEL_4("%*s- This prime factor reduces N to %d-bit.\n", (i + 1) << 1, "", qs->nBits);
-				if ((tmp = divisorsUniquenessHelper(qs, &qs->vars.N)))
+				if ((tmp = divisorsUniquenessHelper(qs, &qs->vars.n)))
 					tasks[i++] = (struct task){tmp, 1}; // 1. And allows us.
 				for (uint32 j = 0; j < qs->divisors.length; ++j) {
 					cint_dup(F, divisors[j]);
@@ -780,7 +777,7 @@ int registerDivisor(QSSheet *qs) {
 			} else
 				DEBUG_LEVEL_4("%*s- The factorization is complete since it's a prime.\n", (i + 1) << 1, "");
 		} else {
-			cint_div(qs->sheet, &qs->vars.N, curr, Q, R) ;
+			cint_div(qs->sheet, &qs->vars.n, curr, Q, R) ;
 			if (R->mem == R->end && IN_RANGE(Q) && (tmp = divisorsUniquenessHelper(qs, Q)))
 				tasks[i++] = (struct task){tmp, 3}; // 3. Divides N.
 			pow = anyRootCheck(qs->state, curr, Q, R) ;
@@ -799,69 +796,69 @@ int registerDivisor(QSSheet *qs) {
 }
 
 void registerRelations(QSSheet * qs, const cint * A, const cint * B, const cint * C) {
-	cint *  TMP = qs->vars.TEMP, * K = &qs->vars.KEY, * V = &qs->vars.VALUE ;
+	cint *  TMP = qs->vars.temp, * K = &qs->vars.key, * V = &qs->vars.value ;
 	uint32 m_idx, idx, mod;
 	// iterates the values of X in [-M/2, +M/2].
 	for (m_idx = 0; m_idx < qs->m.length; ++m_idx)
 		if (qs->m.sieve[m_idx] >= qs->threshold.value) {
 			// over the threshold, compute f(X) and check candidate for smoothness.
-			intToCint(&qs->vars.X, m_idx);
-			cint_subi(&qs->vars.X, &qs->constants.M_HALF); // X = "current index" - M/2
-			cint_mul(A, &qs->vars.X, TMP); // TMP = AX
+			intToCint(&qs->vars.x, m_idx);
+			cint_subi(&qs->vars.x, &qs->constants.mHalf); // X = "current index" - M/2
+			cint_mul(A, &qs->vars.x, TMP); // TMP = AX
 			cint_addi(TMP, B); // TMP = AX + B
 			cint_dup(K, TMP); // Key = copy of AX + B
 			cint_addi(TMP, B); // TMP = AX + 2B
-			cint_mul(TMP, &qs->vars.X, V); // V = AX^2 + 2BX
+			cint_mul(TMP, &qs->vars.x, V); // V = AX^2 + 2BX
 			cint_addi(V, C); // Value = f(X) = AX^2 + 2BX + C
 			// We can inject X in the equation A * C + kN = B * B
 			// So it should hold that (A * X + B)^2 - kN = A * f(X)
 			V->nat = 1 ; // absolute value
-			uint32 target_bits = (uint32) cint_count_bits(V) - qs->error_bits;
-			uint32 removed_bits = 0, * restrict pen = qs->buffer[1];
+			uint32 target_bits = (uint32) cint_count_bits(V) - qs->errorBits;
+			uint32 removedBits = 0, * restrict pen = qs->buffer[1];
 			//  writes the pairs [index of the prime number, power found in V].
 			if (qs->base.data[0].num != 1) {
 				intToCint(TMP, qs->base.data[0].num);
 				*pen++ = 0; // remove powers of the multiplier.
 				*pen = (uint32) cint_remove(qs->sheet, V, TMP);
-				if (*pen) removed_bits += *pen++ * qs->base.data[0].size; else --pen;
+				if (*pen) removedBits += *pen++ * qs->base.data[0].size; else --pen;
 			}
-			for (idx = 1; idx < qs->iterative_list[1]; ++idx)
+			for (idx = 1; idx < qs->iterativeList[1]; ++idx)
 				if (qs->base.data[idx].root[1] == (uint32) -1 || (mod = m_idx % qs->base.data[idx].num, mod == qs->base.data[idx].root[0] || mod == qs->base.data[idx].root[1])) {
 					intToCint(TMP, qs->base.data[idx].num);
 					// for a given prime number of the factor base, "remove" returns
 					// the numbers of powers that was present in V, and V is updated.
 					*pen++ = idx;
 					*pen = (uint32) cint_remove(qs->sheet, V, TMP);
-					if (*pen) removed_bits += *pen++ * qs->base.data[idx].size; else --pen;
+					if (*pen) removedBits += *pen++ * qs->base.data[idx].size; else --pen;
 				}
-			if (removed_bits + qs->m.sieve[m_idx] >= target_bits) {
+			if (removedBits + qs->m.sieve[m_idx] >= target_bits) {
 				// there is a chance to register a new relation.
-				for (removed_bits = 0, target_bits = qs->m.sieve[m_idx]; idx < qs->iterative_list[4] && removed_bits < target_bits; ++idx)
+				for (removedBits = 0, target_bits = qs->m.sieve[m_idx]; idx < qs->iterativeList[4] && removedBits < target_bits; ++idx)
 					if (qs->base.data[idx].root[1] == (uint32) -1 || (mod = m_idx % qs->base.data[idx].num, mod == qs->base.data[idx].root[0] || mod == qs->base.data[idx].root[1])) {
 						intToCint(TMP, qs->base.data[idx].num);
 						*pen++ = idx;
 						*pen = (uint32) cint_remove(qs->sheet, V, TMP);
-						if (*pen) removed_bits += *pen++ * qs->base.data[idx].size; else --pen;
+						if (*pen) removedBits += *pen++ * qs->base.data[idx].size; else --pen;
 					}
-				for (const uint8 mask = 1 << (m_idx & 7); idx < qs->base.length && removed_bits < target_bits; ++idx)
+				for (const uint8 mask = 1 << (m_idx & 7); idx < qs->base.length && removedBits < target_bits; ++idx)
 					if (qs->m.flags[idx] & mask)
 						if (mod = m_idx % qs->base.data[idx].num, mod == qs->base.data[idx].root[0] || mod == qs->base.data[idx].root[1]) {
 							intToCint(TMP, qs->base.data[idx].num);
 							*pen++ = idx;
 							*pen = (uint32) cint_remove(qs->sheet, V, TMP);
-							if (*pen) removed_bits += *pen++ * qs->base.data[idx].size; else --pen;
+							if (*pen) removedBits += *pen++ * qs->base.data[idx].size; else --pen;
 						}
-				const uint32 * restrict const prime_indexes_and_powers[4] = {
-						qs->s.A_indexes, // really factoring A * f(X), commit outstanding A factors.
-						qs->s.A_indexes + qs->s.values.double_value,
+				const uint32 * restrict const primeIndexes_and_powers[4] = {
+						qs->s.aIndexes, // really factoring A * f(X), commit outstanding A factors.
+						qs->s.aIndexes + qs->s.values.doubleValue,
 						qs->buffer[1],
 						pen,
 				};
-				if (h_cint_compare(V, &qs->constants.ONE) == 0)
-					registerRegularRelation(qs, K, prime_indexes_and_powers);
-				else if (155 < qs->knBits && h_cint_compare(V, &qs->constants.TOO_LARGE_PRIME) < 0)
+				if (h_cint_compare(V, &qs->constants.one) == 0)
+					registerRegularRelation(qs, K, primeIndexes_and_powers);
+				else if (155 < qs->knBits && h_cint_compare(V, &qs->constants.tooLargePrime) < 0)
 					//  Store it until another partial share the same variation (also called large prime, cofactor).
-					registerPartialRelation(qs, K, V, prime_indexes_and_powers);
+					registerPartialRelation(qs, K, V, primeIndexes_and_powers);
 			}
 		}
 }
@@ -875,8 +872,8 @@ void registerRegularRelation(QSSheet * qs, const cint * KEY, const uint32 * cons
 	qs->mem.now = rel + 1 ; // a relation must be swappable for Block Lanczos reducing.
 	rel->X = node->key; // constant X is stored by the node key.
 	rel->Y.data = qs->mem.now; // Y data length only decreases.
-	const size_t y_length = (args[1] - args[0] + args[3] - args[2]) >> 1 ;
-	rel->axis.Z.data = rel->Y.data + y_length; // writes Z ahead.
+	const size_t yLength = (args[1] - args[0] + args[3] - args[2]) >> 1 ;
+	rel->axis.Z.data = rel->Y.data + yLength; // writes Z ahead.
 	for (i = 0; i < 4;) {
 		// processes the given column arrays.
 		const uint32 * restrict idx = args[i++], * restrict const end_index = args[i++];
@@ -898,7 +895,7 @@ void registerRegularRelation(QSSheet * qs, const cint * KEY, const uint32 * cons
 	int verified = 0 ;
 	if (rel->Y.length > qs->s.values.defined) {
 		// it often passes.
-		cint *A = qs->vars.TEMP, *B = A + 1;
+		cint *A = qs->vars.temp, *B = A + 1;
 		intToCint(A, 1);
 		for (j = 0; j < rel->axis.Z.length; ++j) {
 			intToCint(B, qs->base.data[rel->axis.Z.data[j]].num);
@@ -933,9 +930,9 @@ void registerPartialRelation(QSSheet * qs, const cint * KEY, const cint * VALUE,
 		old = node->value;
 		if (old->axis.next == 0) {
 			// there is an "old" using the same VALUE, and it has no "next" yet.
-			cint *A = qs->vars.TEMP, *B = A + 1;
+			cint *A = qs->vars.temp, *B = A + 1;
 			if (qs->multiplier != 1)
-				if (cint_gcd(qs->sheet, VALUE, &qs->constants.MULTIPLIER, A), cint_compare_char(A, 1)){
+				if (cint_gcd(qs->sheet, VALUE, &qs->constants.multiplier, A), cint_compare_char(A, 1)){
 					old->X = 0; // VALUE shouldn't be related so close to the multiplier.
 					return;
 				}
@@ -943,8 +940,8 @@ void registerPartialRelation(QSSheet * qs, const cint * KEY, const cint * VALUE,
 			cint_modularInverse(qs->sheet, VALUE, &qs->constants.kN, A);
 			if (A->mem == A->end) {
 				old->X = 0; // no solution to the linear congruence.
-				cint_gcd(qs->sheet, VALUE, &qs->constants.kN, &qs->vars.FACTOR);
-				cint_div(qs->sheet, &qs->vars.N, &qs->vars.FACTOR, A, B);
+				cint_gcd(qs->sheet, VALUE, &qs->constants.kN, &qs->vars.factor);
+				cint_div(qs->sheet, &qs->vars.n, &qs->vars.factor, A, B);
 				if (B->mem == B->end) // found a small factor of N ?
 					registerDivisor(qs);
 				return; // nothing.
@@ -984,11 +981,11 @@ void registerPartialRelation(QSSheet * qs, const cint * KEY, const cint * VALUE,
 
 	if (old) {
 		BEZOUT = old->X + 1 ; // the modular inverse was stored here.
-		cint_mulMod(qs->sheet, new->X, BEZOUT, &qs->constants.kN, &qs->vars.CYCLE);
+		cint_mulMod(qs->sheet, new->X, BEZOUT, &qs->constants.kN, &qs->vars.cycle);
 		do {
 			if (old != new) {
 				// combines, it registers a smooth relation using the 2 buffers.
-				cint_mulMod(qs->sheet, &qs->vars.CYCLE, old->X, &qs->constants.kN, &qs->vars.KEY);
+				cint_mulMod(qs->sheet, &qs->vars.cycle, old->X, &qs->constants.kN, &qs->vars.key);
 				uint32 * restrict begin = qs->buffer[0], * restrict pen = begin;
 				data = memset(qs->buffer[1], 0, qs->base.length * sizeof(*data));
 				for (uint32 i = 0; i < new->Y.length; i += 2)
@@ -999,8 +996,8 @@ void registerPartialRelation(QSSheet * qs, const cint * KEY, const cint * VALUE,
 					if (data[i]) // writes [index of the prime number, power]
 						*pen++ = i, *pen++ = data[i];
 				args = (const uint32 * restrict const[4]){ begin, pen, 0, 0, };
-				registerRegularRelation(qs, &qs->vars.KEY, args);
-				++qs->relations.length.by_partial;
+				registerRegularRelation(qs, &qs->vars.key, args);
+				++qs->relations.length.byPartial;
 				memset(begin, 0, (char *) pen - (char *) begin); // zeroed.
 			}
 		} while ((old = old->axis.next));
@@ -1013,7 +1010,7 @@ void factorizeUsingNullVectors(QSSheet * qs, const uint64_t * restrict const lan
 	if (*lanczos_answer == 0)
 		return;
 	const uint64_t mask = *lanczos_answer, * restrict null_rows = lanczos_answer + 1;
-	cint *X = &qs->vars.X, *Y = qs->vars.TEMP, *TMP = Y + 1, *POW = Y + 2;
+	cint *X = &qs->vars.x, *Y = qs->vars.temp, *TMP = Y + 1, *POW = Y + 2;
 	uint32 * restrict power_of_primes;
 	for(uint32 row = 0; row < 64 && qs->nBits != 1; ++row)
 		if (mask >> row & 1){
@@ -1025,7 +1022,7 @@ void factorizeUsingNullVectors(QSSheet * qs, const uint64_t * restrict const lan
 					const struct QSRelation * restrict const rel = qs->relations.data[i];
 					// The algorithm must retrieve the X and Z relation fields
 					// related to the Y field initially submitted to Block Lanczos.
-					cint_mulModi(qs->sheet, X, rel->X, &qs->vars.N);
+					cint_mulModi(qs->sheet, X, rel->X, &qs->vars.n);
 					for (uint32 j = 0; j < rel->axis.Z.length; ++j)
 						++power_of_primes[rel->axis.Z.data[j]];
 				}
@@ -1034,12 +1031,12 @@ void factorizeUsingNullVectors(QSSheet * qs, const uint64_t * restrict const lan
 					// powers are even ... square root ...
 					intToCint(TMP, qs->base.data[i].num);
 					intToCint(POW, power_of_primes[i] >> 1);
-					cint_powModi(qs->sheet, TMP, POW, &qs->vars.N);
-					cint_mulModi(qs->sheet, Y, TMP, &qs->vars.N);
+					cint_powModi(qs->sheet, TMP, POW, &qs->vars.n);
+					cint_mulModi(qs->sheet, Y, TMP, &qs->vars.n);
 				}
 			h_cint_subi(Y, X);
 			if (Y->mem != Y->end) {
-				cint_gcd(qs->sheet, &qs->vars.N, Y, &qs->vars.FACTOR);
+				cint_gcd(qs->sheet, &qs->vars.n, Y, &qs->vars.factor);
 				// 100 digits RSA number has been factored by the software in 2022.
 				if (registerDivisor(qs) == 0)
 					break;
@@ -1056,22 +1053,22 @@ int processRemainingFactors(QSSheet *qs) {
 			for (uint32 j = 1 + i; j < qs->divisors.length; ++j)
 				if (h_cint_compare(divisors[j], divisors[i]) < 0)
 					tmp = divisors[i], divisors[i] = divisors[j], divisors[j] = tmp; // Apply a selection sort.
-			if (h_cint_compare(&qs->constants.ONE, divisors[i]) < 0 && h_cint_compare(divisors[i], &qs->vars.N) < 0) {
-				const int power = (int) cint_remove(qs->sheet, &qs->vars.N, divisors[i]);
+			if (h_cint_compare(&qs->constants.one, divisors[i]) < 0 && h_cint_compare(divisors[i], &qs->vars.n) < 0) {
+				const int power = (int) cint_remove(qs->sheet, &qs->vars.n, divisors[i]);
 				if (power) {
 					DEBUG_LEVEL_4("Quadratic Sieve submits the composite divisor %s as a result.\n", cintString(qs->state, divisors[i]));
 					manager_add_factor(qs->state, divisors[i], power, -1); // -1 marks this divisor as composite for recursive factorization.
-					qs->nBits = (uint32) cint_count_bits(&qs->vars.N);
+					qs->nBits = (uint32) cint_count_bits(&qs->vars.n);
 				}
 			} else
 				break; // No need to sort more.
 		}
 		// Recursively running the Quadratic Sieve will allow faster factorization than this oversized instance.
-		DEBUG_LEVEL_3("[x] Maintenance is to forward the remainder %s.\n", cintString(qs->state, &qs->vars.N));
+		DEBUG_LEVEL_3("[x] Maintenance is to forward the remainder %s.\n", cintString(qs->state, &qs->vars.n));
 	}
 
 	if (qs->uniqueness[1].count)
-		DEBUG_LEVEL_4("The sieve reported %u partials which added %u smooth relations.\n", (unsigned) qs->uniqueness[1].count, qs->relations.length.by_partial);
+		DEBUG_LEVEL_4("The sieve reported %u partials which added %u smooth relations.\n", (unsigned) qs->uniqueness[1].count, qs->relations.length.byPartial);
 	DEBUG_LEVEL_4("The algorithm completed with %u polynomials and %u relations.\n", qs->poly.curves, qs->relations.length.peak);
 	DEBUG_LEVEL_4("Used %u MB of memory during %.02f second(s).\n", (unsigned) ((char *) qs->mem.now - (char *) qs->mem.base) >> 20, 0.001 * (getTime() - qs->time.start));
 
@@ -1079,7 +1076,7 @@ int processRemainingFactors(QSSheet *qs) {
 	const int has_fully_factored = qs->nBits == 1, has_partially_factored = qs->divisors.length != 0 ;
 	const int res = has_fully_factored || has_partially_factored ;
 	if (res) // Updates the input number accordingly, since the algorithm worked on a copy of it.
-		cint_dup(&qs->state->session.num, &qs->vars.N);
+		cint_dup(&qs->state->session.num, &qs->vars.n);
 
 	return res ;
 }
