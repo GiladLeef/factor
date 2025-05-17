@@ -88,7 +88,7 @@ typedef struct {
 
 // Quadratic sieve structures
 
-struct qs_relation {
+struct QSRelation {
 	uint32 id; // smooth relations have a non-zero id.
 	cint *X;
 	struct {
@@ -100,7 +100,7 @@ struct qs_relation {
 			uint32 *data;
 			uint32 length;
 		} Z;
-		struct qs_relation *next;
+		struct QSRelation *next;
 	} axis;
 	// axis :
 	// - "Z" field is used by smooth relations.
@@ -221,7 +221,7 @@ typedef struct {
 
 	// data collection made by algorithm
 	struct {
-		struct qs_relation **data;
+		struct QSRelation **data;
 		struct {
 			uint32 prev;
 			uint32 now;
@@ -245,14 +245,14 @@ typedef struct {
 		uint32 n_iterations;
 		uint32 safe_length;
 		struct {
-			struct qs_relation *relation;
+			struct QSRelation *relation;
 			uint32 y_length;
 		} *snapshot;
 	} lanczos;
 
 	state *state;
 
-} QsSheet;
+} QSSheet;
 
 // Factorization manager, file i/o utilities, misc utilities.
 static void printHelp(const char *);
@@ -319,48 +319,48 @@ static void rhoWorker(state *, uint64, fac64_row *);
 
 // Quadratic sieve.
 static int quadraticSieve(state *, int);
-static int innerContinuationCondition(QsSheet *);
-static int outerContinuationCondition(QsSheet *);
-static void parametrize(QsSheet *);
+static int innerContinuationCondition(QSSheet *);
+static int outerContinuationCondition(QSSheet *);
+static void parametrize(QSSheet *);
 static uint32 linearParamResolution(const double [][2], uint32);
-static void initializeState(QsSheet *, state *, int);
-static void adjustInputSize(QsSheet *);
-static void selectMultiplier(QsSheet *);
-static void scoreDefaultMultipliers(QsSheet *, uint32 *, size_t);
-static void scoreAlternativeMultipliers(QsSheet *, uint32 *, size_t);
-static void allocateMemory(QsSheet *);
-static void generateFactorBase(QsSheet *);
-static void setupPolynomialParameters(QsSheet *);
-static void getStartedIteration(QsSheet *);
-static void iterationPart1(QsSheet *, const cint *, cint *);
-static void iterationPart2(QsSheet *, const cint *, cint *);
-static void iterationPart3(QsSheet *, const cint *, const cint *);
-static uint32 iterationPart4(const QsSheet *, uint32, uint32 **, cint *);
-static void iterationPart5(QsSheet *, const cint *, const cint *);
-static void iterationPart6(QsSheet *, const cint *, const cint *, const cint *, cint *);
-static void iterationPart7(QsSheet *, uint32, const uint32 *restrict);
-static void iterationPart8(QsSheet *, uint32, const uint32 *);
-static cint * divisorsUniquenessHelper(QsSheet *, const cint *);
-static int registerDivisor(QsSheet *);
-static void registerRelations(QsSheet *, const cint *, const cint *, const cint *);
-static void registerRegularRelation(QsSheet *, const cint *, const uint32 *const restrict[4]);
-static void registerPartialRelation(QsSheet *, const cint *, const cint *, const uint32 *const restrict[4]);
-static void factorizeUsingNullVectors(QsSheet *, const uint64_t *restrict);
-static int processRemainingFactors(QsSheet *);
+static void initializeState(QSSheet *, state *, int);
+static void adjustInputSize(QSSheet *);
+static void selectMultiplier(QSSheet *);
+static void scoreDefaultMultipliers(QSSheet *, uint32 *, size_t);
+static void scoreAlternativeMultipliers(QSSheet *, uint32 *, size_t);
+static void allocateMemory(QSSheet *);
+static void generateFactorBase(QSSheet *);
+static void setupPolynomialParameters(QSSheet *);
+static void getStartedIteration(QSSheet *);
+static void iterationPart1(QSSheet *, const cint *, cint *);
+static void iterationPart2(QSSheet *, const cint *, cint *);
+static void iterationPart3(QSSheet *, const cint *, const cint *);
+static uint32 iterationPart4(const QSSheet *, uint32, uint32 **, cint *);
+static void iterationPart5(QSSheet *, const cint *, const cint *);
+static void iterationPart6(QSSheet *, const cint *, const cint *, const cint *, cint *);
+static void iterationPart7(QSSheet *, uint32, const uint32 *restrict);
+static void iterationPart8(QSSheet *, uint32, const uint32 *);
+static cint * divisorsUniquenessHelper(QSSheet *, const cint *);
+static int registerDivisor(QSSheet *);
+static void registerRelations(QSSheet *, const cint *, const cint *, const cint *);
+static void registerRegularRelation(QSSheet *, const cint *, const uint32 *const restrict[4]);
+static void registerPartialRelation(QSSheet *, const cint *, const cint *, const uint32 *const restrict[4]);
+static void factorizeUsingNullVectors(QSSheet *, const uint64_t *restrict);
+static int processRemainingFactors(QSSheet *);
 
 // Linear algebra with Block Lanczos algorithm.
-static void lanczos_mul_MxN_Nx64(const QsSheet *, const uint64_t *, uint32, uint64_t *);
-static void lanczos_mul_trans_MxN_Nx64(const QsSheet *, const uint64_t *, uint64_t *);
-static void lanczos_mul_64xN_Nx64(const QsSheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
+static void lanczos_mul_MxN_Nx64(const QSSheet *, const uint64_t *, uint32, uint64_t *);
+static void lanczos_mul_trans_MxN_Nx64(const QSSheet *, const uint64_t *, uint64_t *);
+static void lanczos_mul_64xN_Nx64(const QSSheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
 static uint64_t lanczos_find_non_singular_sub(const uint64_t *, const uint64_t *, uint64_t *, uint64_t, uint64_t *);
-static void lanczos_mul_Nx64_64x64_acc(QsSheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
+static void lanczos_mul_Nx64_64x64_acc(QSSheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
 static void lanczos_mul_64x64_64x64(const uint64_t *, const uint64_t *, uint64_t *);
-static void lanczos_transpose_vector(QsSheet *, const uint64_t *, uint64_t **);
-static void lanczos_combine_cols(QsSheet *, uint64_t *, uint64_t *, uint64_t *, uint64_t *);
-static void lanczos_build_array(QsSheet *, uint64_t **, size_t, size_t);
-static uint64_t *lanczos_block_worker(QsSheet *);
-static void lanczos_reduce_matrix(QsSheet *);
-static uint64_t *block_lanczos(QsSheet *);
+static void lanczos_transpose_vector(QSSheet *, const uint64_t *, uint64_t **);
+static void lanczos_combine_cols(QSSheet *, uint64_t *, uint64_t *, uint64_t *, uint64_t *);
+static void lanczos_build_array(QSSheet *, uint64_t **, size_t, size_t);
+static uint64_t *lanczos_block_worker(QSSheet *);
+static void lanczos_reduce_matrix(QSSheet *);
+static uint64_t *block_lanczos(QSSheet *);
 
 // Verbose level 0: just factorization, no other messages (default when there is no terminal).
 // Verbose level 1: also show task progress in percentage (default when there is a terminal).
