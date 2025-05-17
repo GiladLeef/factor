@@ -52,7 +52,7 @@ int cliParamMatch(const char *str, const char *long_name, const char *short_name
 	return (short_name && !strcmp(str, short_name)) || !strcmp(str, long_name);
 }
 
-int read_key_and_3_values(const char **argv, state *state) {
+int readKeyAnd3Values(const char **argv, state *state) {
 #define FILL(name_1, shortcut, name_2) \
     if (cliParamMatch(*argv, "--" #name_1, "-" #shortcut) && \
         (n_1 = getNum(*(argv + 1))) && \
@@ -70,7 +70,7 @@ int read_key_and_3_values(const char **argv, state *state) {
 	return 1;
 }
 
-int read_key_and_2_values(const char **argv, state *state) {
+int readKeyAnd2Values(const char **argv, state *state) {
 #define FETCH ((n_1 = getNum(val_1)) && (n_2 = getNum(val_2)))
 	const char *key = *argv, *val_1 = *(argv + 1), *val_2 = *(argv + 2);
 	uint64 n_1, n_2;
@@ -594,7 +594,7 @@ size_t prepareFileDescriptors(state *state) {
 	return state->scale.total_rows;
 }
 
-int validate_string_number(const char *s, state *state) {
+int validateStringNumber(const char *s, state *state) {
 	// Ensure that the string (number to factor) is well-formed, count the
 	// total of submitted numbers, and note the size (decimal digits) of the largest.
 	size_t digits;

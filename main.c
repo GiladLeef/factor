@@ -28,10 +28,10 @@ int main(int argc, const char *argv[]) {
 
 	// Read the command line arguments.
 	for (int i = 1; i < argc; ++i)
-		if (!(i + 3 < argc && read_key_and_3_values(argv + i, &state) && (i += 3)))
-			if (!(i + 2 < argc && read_key_and_2_values(argv + i, &state) && (i += 2)))
+		if (!(i + 3 < argc && readKeyAnd3Values(argv + i, &state) && (i += 3)))
+			if (!(i + 2 < argc && readKeyAnd2Values(argv + i, &state) && (i += 2)))
 				if (!(i + 1 < argc && readKeyValue(argv + i, &state) && ++i))
-					if (!(validate_string_number(argv[i], &state) || readFlags(argv + i, &state)))
+					if (!(validateStringNumber(argv[i], &state) || readFlags(argv + i, &state)))
 						fprintf(stderr, "%s: Unknown argument '%s'.\n", argv[0], (state.code = 2, argv[i]));
 
 	state.params.rand.seed += !state.params.rand.seed; // Optional.
