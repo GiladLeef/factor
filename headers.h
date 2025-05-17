@@ -168,8 +168,8 @@ typedef struct {
 	uint64_t * seed;
 	uint64 adjustor;
 	uint32 multiplier;
-	uint32 n_bits;
-	uint32 kn_bits;
+	uint32 nBits;
+	uint32 knBits;
 	struct {
 		uint8 **positions[2];
 		uint8 *sieve;
@@ -183,7 +183,7 @@ typedef struct {
 	struct {
 		uint32 value;
 	} threshold;
-	uint32 sieve_again_perms;
+	uint32 sieveAgainPerms;
 
 	// useful data sharing same length
 	struct {
@@ -252,7 +252,7 @@ typedef struct {
 
 	state *state;
 
-} qs_sheet;
+} QsSheet;
 
 // Factorization manager, file i/o utilities, misc utilities.
 static void printHelp(const char *);
@@ -319,48 +319,48 @@ static void rhoWorker(state *, uint64, fac64_row *);
 
 // Quadratic sieve.
 static int quadraticSieve(state *, int);
-static int inner_continuation_condition(qs_sheet *);
-static int outer_continuation_condition(qs_sheet *);
-static void qs_parametrize(qs_sheet *);
-static uint32 linear_param_resolution(const double [][2], uint32);
-static void qs_initialize_state(qs_sheet *, state *, int);
-static void qs_adjust_input_size(qs_sheet *);
-static void qs_select_multiplier(qs_sheet *);
-static void qs_score_default_multipliers(qs_sheet *, uint32 *, size_t);
-static void qs_score_alternative_multipliers(qs_sheet *, uint32 *, size_t);
-static void qs_allocate_memory(qs_sheet *);
-static void qs_generate_factor_base(qs_sheet *);
-static void qs_setup_polynomial_parameters(qs_sheet *);
-static void get_started_iteration(qs_sheet *);
-static void iteration_part_1(qs_sheet *, const cint *, cint *);
-static void iteration_part_2(qs_sheet *, const cint *, cint *);
-static void iteration_part_3(qs_sheet *, const cint *, const cint *);
-static uint32 iteration_part_4(const qs_sheet *, uint32, uint32 **, cint *);
-static void iteration_part_5(qs_sheet *, const cint *, const cint *);
-static void iteration_part_6(qs_sheet *, const cint *, const cint *, const cint *, cint *);
-static void iteration_part_7(qs_sheet *, uint32, const uint32 *restrict);
-static void iteration_part_8(qs_sheet *, uint32, const uint32 *);
-static cint * qs_divisors_uniqueness_helper(qs_sheet *, const cint *);
-static int qs_register_divisor(qs_sheet *);
-static void register_relations(qs_sheet *, const cint *, const cint *, const cint *);
-static void register_regular_relation(qs_sheet *, const cint *, const uint32 *const restrict[4]);
-static void register_partial_relation(qs_sheet *, const cint *, const cint *, const uint32 *const restrict[4]);
-static void qs_factorize_using_null_vectors(qs_sheet *, const uint64_t *restrict);
-static int qs_process_remaining_factors(qs_sheet *);
+static int innerContinuationCondition(QsSheet *);
+static int outerContinuationCondition(QsSheet *);
+static void parametrize(QsSheet *);
+static uint32 linearParamResolution(const double [][2], uint32);
+static void initializeState(QsSheet *, state *, int);
+static void adjustInputSize(QsSheet *);
+static void selectMultiplier(QsSheet *);
+static void scoreDefaultMultipliers(QsSheet *, uint32 *, size_t);
+static void scoreAlternativeMultipliers(QsSheet *, uint32 *, size_t);
+static void allocateMemory(QsSheet *);
+static void generateFactorBase(QsSheet *);
+static void setupPolynomialParameters(QsSheet *);
+static void getStartedIteration(QsSheet *);
+static void iterationPart1(QsSheet *, const cint *, cint *);
+static void iterationPart2(QsSheet *, const cint *, cint *);
+static void iterationPart3(QsSheet *, const cint *, const cint *);
+static uint32 iterationPart4(const QsSheet *, uint32, uint32 **, cint *);
+static void iterationPart5(QsSheet *, const cint *, const cint *);
+static void iterationPart6(QsSheet *, const cint *, const cint *, const cint *, cint *);
+static void iterationPart7(QsSheet *, uint32, const uint32 *restrict);
+static void iterationPart8(QsSheet *, uint32, const uint32 *);
+static cint * divisorsUniquenessHelper(QsSheet *, const cint *);
+static int registerDivisor(QsSheet *);
+static void registerRelations(QsSheet *, const cint *, const cint *, const cint *);
+static void registerRegularRelation(QsSheet *, const cint *, const uint32 *const restrict[4]);
+static void registerPartialRelation(QsSheet *, const cint *, const cint *, const uint32 *const restrict[4]);
+static void factorizeUsingNullVectors(QsSheet *, const uint64_t *restrict);
+static int processRemainingFactors(QsSheet *);
 
 // Linear algebra with Block Lanczos algorithm.
-static void lanczos_mul_MxN_Nx64(const qs_sheet *, const uint64_t *, uint32, uint64_t *);
-static void lanczos_mul_trans_MxN_Nx64(const qs_sheet *, const uint64_t *, uint64_t *);
-static void lanczos_mul_64xN_Nx64(const qs_sheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
+static void lanczos_mul_MxN_Nx64(const QsSheet *, const uint64_t *, uint32, uint64_t *);
+static void lanczos_mul_trans_MxN_Nx64(const QsSheet *, const uint64_t *, uint64_t *);
+static void lanczos_mul_64xN_Nx64(const QsSheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
 static uint64_t lanczos_find_non_singular_sub(const uint64_t *, const uint64_t *, uint64_t *, uint64_t, uint64_t *);
-static void lanczos_mul_Nx64_64x64_acc(qs_sheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
+static void lanczos_mul_Nx64_64x64_acc(QsSheet *, const uint64_t *, const uint64_t *, uint64_t *, uint64_t *);
 static void lanczos_mul_64x64_64x64(const uint64_t *, const uint64_t *, uint64_t *);
-static void lanczos_transpose_vector(qs_sheet *, const uint64_t *, uint64_t **);
-static void lanczos_combine_cols(qs_sheet *, uint64_t *, uint64_t *, uint64_t *, uint64_t *);
-static void lanczos_build_array(qs_sheet *, uint64_t **, size_t, size_t);
-static uint64_t *lanczos_block_worker(qs_sheet *);
-static void lanczos_reduce_matrix(qs_sheet *);
-static uint64_t *block_lanczos(qs_sheet *);
+static void lanczos_transpose_vector(QsSheet *, const uint64_t *, uint64_t **);
+static void lanczos_combine_cols(QsSheet *, uint64_t *, uint64_t *, uint64_t *, uint64_t *);
+static void lanczos_build_array(QsSheet *, uint64_t **, size_t, size_t);
+static uint64_t *lanczos_block_worker(QsSheet *);
+static void lanczos_reduce_matrix(QsSheet *);
+static uint64_t *block_lanczos(QsSheet *);
 
 // Verbose level 0: just factorization, no other messages (default when there is no terminal).
 // Verbose level 1: also show task progress in percentage (default when there is a terminal).

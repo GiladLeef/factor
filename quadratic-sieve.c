@@ -11,34 +11,34 @@ int quadraticSieve(state * state, int bits) {
 	if (bits < 65)
 		return 0; // For every additional 10 bits, the factorization duration roughly doubles.
 
-	qs_sheet qs = {0};
-	qs_initialize_state(&qs, state, bits);
-	qs_adjust_input_size(&qs);
-	qs_select_multiplier(&qs);
-	qs_parametrize(&qs);
-	qs_allocate_memory(&qs);
-	qs_generate_factor_base(&qs);
-	qs_setup_polynomial_parameters(&qs);
+	QsSheet qs = {0};
+	initializeState(&qs, state, bits);
+	adjustInputSize(&qs);
+	selectMultiplier(&qs);
+	parametrize(&qs);
+	allocateMemory(&qs);
+	generateFactorBase(&qs);
+	setupPolynomialParameters(&qs);
 	do {
 		do {
 			// Keep randomly trying various polynomials.
-			get_started_iteration(&qs);
-			iteration_part_1(&qs, &qs.poly.D, &qs.poly.A);
-			iteration_part_2(&qs, &qs.poly.A, &qs.poly.B);
-			iteration_part_3(&qs, &qs.poly.A, &qs.poly.B);
-			for (uint32 i = 0, addi, *corr; i < qs.poly.gray_max && qs.n_bits != 1; ++i, ++qs.poly.curves) {
-				addi = iteration_part_4(&qs, i, &corr, &qs.poly.B);
-				iteration_part_5(&qs, &qs.constants.kN, &qs.poly.B);
-				iteration_part_6(&qs, &qs.constants.kN, &qs.poly.A, &qs.poly.B, &qs.poly.C);
-				iteration_part_7(&qs, addi, corr);
-				iteration_part_8(&qs, addi, corr);
-				register_relations(&qs, &qs.poly.A, &qs.poly.B, &qs.poly.C);
+			getStartedIteration(&qs);
+			iterationPart1(&qs, &qs.poly.D, &qs.poly.A);
+			iterationPart2(&qs, &qs.poly.A, &qs.poly.B);
+			iterationPart3(&qs, &qs.poly.A, &qs.poly.B);
+			for (uint32 i = 0, addi, *corr; i < qs.poly.gray_max && qs.nBits != 1; ++i, ++qs.poly.curves) {
+				addi = iterationPart4(&qs, i, &corr, &qs.poly.B);
+				iterationPart5(&qs, &qs.constants.kN, &qs.poly.B);
+				iterationPart6(&qs, &qs.constants.kN, &qs.poly.A, &qs.poly.B, &qs.poly.C);
+				iterationPart7(&qs, addi, corr);
+				iterationPart8(&qs, addi, corr);
+				registerRelations(&qs, &qs.poly.A, &qs.poly.B, &qs.poly.C);
 			}
-		} while (inner_continuation_condition(&qs));
+		} while (innerContinuationCondition(&qs));
 		// Analyzes all observations made by the algorithm.
-		qs_factorize_using_null_vectors(&qs, block_lanczos(&qs));
-	} while (outer_continuation_condition(&qs));
-	const int res = qs_process_remaining_factors(&qs);
+		factorizeUsingNullVectors(&qs, block_lanczos(&qs));
+	} while (outerContinuationCondition(&qs));
+	const int res = processRemainingFactors(&qs);
 	free(qs.mem.base);
 	return res;
 }
@@ -46,11 +46,11 @@ int quadraticSieve(state * state, int bits) {
 // Quadratic sieve main condition 1 (often) :
 // - Returns 1 : to produce more polynomials and relations.
 // - Returns 0 : to start linear algebra with Block Lanczos.
-int inner_continuation_condition(qs_sheet *qs) {
+int innerContinuationCondition(QsSheet *qs) {
 	int answer = 1 ;
 	if ((qs->time.end || 2 < qs->state->params.verbose) && qs->time.tick % 16 == 1)
 		qs->time.now = getTime();
-	answer &= qs->n_bits != 1 ; // the bit count of N may have changed.
+	answer &= qs->nBits != 1 ; // the bit count of N may have changed.
 	answer &= (qs->relations.length.peak = qs->relations.length.now) < qs->relations.length.needs; // the condition.
 	answer &= !qs->time.end || qs->time.tick % 16 == 1 || qs->time.now < qs->time.end ;
 	answer &= qs->time.tick != qs->state->params.qs_tick_end ;
@@ -68,62 +68,62 @@ int inner_continuation_condition(qs_sheet *qs) {
 // Quadratic sieve main condition 2. Block Lanczos linear algebra has been completed :
 // - Returns 1 : to get a new attempt at linear algebra with more relations.
 // - Returns 0 : when N = 1 (meaning it is fully factored) or to give up.
-int outer_continuation_condition(qs_sheet *qs) {
+int outerContinuationCondition(QsSheet *qs) {
 	int answer = 1 ;
-	answer &= qs->n_bits != 1 ; // the bit count of N isn't 1.
-	answer &= qs->sieve_again_perms-- != 0 ; // avoid infinite loop.
+	answer &= qs->nBits != 1 ; // the bit count of N isn't 1.
+	answer &= qs->sieveAgainPerms-- != 0 ; // avoid infinite loop.
 	answer &= qs->divisors.total_primes == 0 ; // search prime factors.
 	answer &= !qs->time.end || getTime() < qs->time.end ;
 	answer &= qs->time.tick != qs->state->params.qs_tick_end ;
 	if (answer) {
 		uint32 new_needs = qs->relations.length.needs;
-		new_needs += new_needs >> (2 + qs->sieve_again_perms);
+		new_needs += new_needs >> (2 + qs->sieveAgainPerms);
 		DEBUG_LEVEL_3("[x] Maintenance re-evaluates the needs for %u additional relations.\n", new_needs - qs->relations.length.needs);
 		qs->relations.length.needs = new_needs ;
 	}
 	return answer;
 }
 
-void qs_parametrize(qs_sheet *qs) {
+void parametrize(QsSheet *qs) {
 
-	const uint32 bits = qs->kn_bits; // N adjusted has at least 115-bit.
-	qs->kn_bits = (uint32) cint_count_bits(qs->state->session.tmp); // kN may be slight larger.
+	const uint32 bits = qs->knBits; // N adjusted has at least 115-bit.
+	qs->knBits = (uint32) cint_count_bits(qs->state->session.tmp); // kN may be slight larger.
 
-	DEBUG_LEVEL_4("N is a %u-bit number, and kN is a %u-bit number using %u words.\n", (uint32) cint_count_bits(&qs->state->session.num), qs->kn_bits, (unsigned)(qs->state->session.tmp->end - qs->state->session.tmp->mem));
+	DEBUG_LEVEL_4("N is a %u-bit number, and kN is a %u-bit number using %u words.\n", (uint32) cint_count_bits(&qs->state->session.num), qs->knBits, (unsigned)(qs->state->session.tmp->end - qs->state->session.tmp->mem));
 
 	uint64 tmp ;
 	// params as { bits, value } take the extremal value if bits exceed.
 	static const double param_base_size [][2]= { {135, 1300}, {165, 4200}, {200, 10000}, {260, 20000}, {330, 55000}, {0} };
-	qs->base.length = (tmp = qs->state->params.qs_base_size) ? tmp : linear_param_resolution(param_base_size, bits);
+	qs->base.length = (tmp = qs->state->params.qs_base_size) ? tmp : linearParamResolution(param_base_size, bits);
 
 	static const double param_laziness [][2]= {{150, 95}, {220, 100}, {0} };
 	// collecting more/fewer relations than recommended (in percentage).
-	qs->relations.length.needs = qs->base.length * ((tmp = qs->state->params.qs_laziness) ? tmp : linear_param_resolution(param_laziness, bits)) / 100;
+	qs->relations.length.needs = qs->base.length * ((tmp = qs->state->params.qs_laziness) ? tmp : linearParamResolution(param_laziness, bits)) / 100;
 	DEBUG_LEVEL_4("The algorithm use the seed %" PRIu64 " and targets %u relations.\n", qs->state->params.rand.custom, qs->relations.length.needs);
 
 	static const double param_m_value [][2]= { {120, 1}, {330, 6}, {0} };
-	qs->m.length = (qs->m.length_half = (qs->state->params.qs_sieve ? qs->state->params.qs_sieve : 31744) * linear_param_resolution(param_m_value, bits)) << 1;
+	qs->m.length = (qs->m.length_half = (qs->state->params.qs_sieve ? qs->state->params.qs_sieve : 31744) * linearParamResolution(param_m_value, bits)) << 1;
 
 	qs->m.cache_size = 95232 ; // algorithm reaches "M length" by steps of "cache size".
 
 	static const double param_error [][2]= { {120, 15}, {330, 35}, {0} };
 	// Logarithms of primes are rounded and errors accumulate; this specifies the magnitude of the error.
-	qs->error_bits = (tmp = qs->state->params.qs_error_bits) ? tmp : linear_param_resolution(param_error, bits);
+	qs->error_bits = (tmp = qs->state->params.qs_error_bits) ? tmp : linearParamResolution(param_error, bits);
 
 	static const double param_threshold [][2]= { {120, 60}, {330, 110}, {0} };
 	// The threshold that the sieve value must exceed to be considered smooth.
-	qs->threshold.value = (tmp = qs->state->params.qs_threshold) ? tmp : linear_param_resolution(param_threshold, bits);
+	qs->threshold.value = (tmp = qs->state->params.qs_threshold) ? tmp : linearParamResolution(param_threshold, bits);
 
 	// A good multiplier reduces memory usage up to twice.
 	static const double param_alloc [][2]= { {130, 992}, {140, 1280}, {150, 2176}, {160, 3584}, {170, 7168}, {180, 12288}, {190, 14336}, {190, 14336}, {200, 24576}, {210, 30720}, {220, 40960}, {230, 49152}, {240, 57344}, {250, 67584}, {260, 81920}, {270, 98304}, {280, 114688}, {290, 122880}, {300, 139264}, {310, 163840}, {320, 196608}, {330, 229376}, {0} };
-	qs->mem.bytes_allocated = (tmp = qs->state->params.qs_alloc_mb) ? tmp << 20 : linear_param_resolution(param_alloc, qs->kn_bits) << 10;
+	qs->mem.bytes_allocated = (tmp = qs->state->params.qs_alloc_mb) ? tmp << 20 : linearParamResolution(param_alloc, qs->knBits) << 10;
 
-	qs->sieve_again_perms = 3; // Sieve again up to 3 times before giving up
+	qs->sieveAgainPerms = 3; // Sieve again up to 3 times before giving up
 
 	// Iterative list
 	qs->iterative_list[0] = 1; // one
 	static const double param_first_prime [][2] = { {170, 8}, {210, 12}, {320, 40}, {0} };
-	qs->iterative_list[1] = linear_param_resolution(param_first_prime, bits); // first
+	qs->iterative_list[1] = linearParamResolution(param_first_prime, bits); // first
 	tmp = qs->state->params.qs_sieve_cutoff ? qs->state->params.qs_sieve_cutoff : 5120 ;
 	const uint32 large_base = tmp < qs->base.length ? tmp : qs->base.length;
 	qs->iterative_list[2] = large_base >> 2; // medium
@@ -135,7 +135,7 @@ void qs_parametrize(qs_sheet *qs) {
 	const uint64 last_prime_in_base = (uint64) (qs->base.length * 2.5 * log(qs->base.length));
 	qs->relations.too_large_prime = (tmp = qs->state->params.qs_large_prime) ? tmp : last_prime_in_base << 4;
 
-	if (155 < qs->kn_bits)
+	if (155 < qs->knBits)
 		DEBUG_LEVEL_4("The single large-prime variation is being processed under %" PRIu64 ".\n", qs->relations.too_large_prime);
 
 	qs->s.values.double_value = (qs->s.values.defined = (qs->s.values.subtract_one = bits / 28) + 1) << 1;
@@ -149,7 +149,7 @@ void qs_parametrize(qs_sheet *qs) {
 }
 
 // Quadratic sieve utility function for parameter extrapolation.
-uint32 linear_param_resolution(const double v[][2], const uint32 point) {
+uint32 linearParamResolution(const double v[][2], const uint32 point) {
 	uint32 res, i, j ;
 	if (v[1][0] == 0)
 		res = (uint32) v[0][1];
@@ -168,13 +168,13 @@ uint32 linear_param_resolution(const double v[][2], const uint32 point) {
 }
 
 // Quadratic sieve source (algorithm)
-void qs_initialize_state(qs_sheet *qs, state *state, int bits) {
+void initializeState(QsSheet *qs, state *state, int bits) {
 	// initializing (until kN is computed) with manager resources.
 	qs->state = state;
 	DEBUG_LEVEL_4("\nQuadratic Sieve on %s.\n", cintString(state, &state->session.num));
 	qs->sheet = state->session.sheet;
 	qs->seed = state->session.seed;
-	qs->n_bits = qs->kn_bits = bits;
+	qs->nBits = qs->knBits = bits;
 	if (2 < state->params.verbose || state->params.timeout) {
 		qs->time.start = getTime() ;
 		if (state->params.timeout)
@@ -182,7 +182,7 @@ void qs_initialize_state(qs_sheet *qs, state *state, int bits) {
 	}
 }
 
-void qs_adjust_input_size(qs_sheet *qs) {
+void adjustInputSize(QsSheet *qs) {
 	// The algorithm is suitable for numbers larger than 115-bit,
 	// and may adjust kN by a prime number to reach this size.
 	cint * N = &qs->state->session.num, * kN = qs->state->session.tmp, *ADJUSTOR = kN + 1 ;
@@ -191,18 +191,18 @@ void qs_adjust_input_size(qs_sheet *qs) {
 			9, 43, 35, 15, 29, 3, 11, 3, 11, 15, 17, 25, 53,
 			31, 9, 7, 23, 15, 27, 15, 29, 7, 59, 15, 5, 21,
 			69, 55, 21, 21, 5, 159, 3, 81, 9, 69, 131, 33, 15 };
-	const uint32 bits = (uint32) qs->n_bits;
+	const uint32 bits = (uint32) qs->nBits;
 	if (bits < 115) {
 		qs->adjustor = (1LLU << (124 - bits)) + prime_generator[115 - bits] ;
 		intToCint(ADJUSTOR, qs->adjustor);
 		cint_mul(N, ADJUSTOR, kN);
-		qs->kn_bits = (uint32) cint_count_bits(kN);
-		DEBUG_LEVEL_4("Input (%u bits) is multiplied by %" PRIu64 " to reach %u bits.\n", bits, qs->adjustor, qs->kn_bits);
+		qs->knBits = (uint32) cint_count_bits(kN);
+		DEBUG_LEVEL_4("Input (%u bits) is multiplied by %" PRIu64 " to reach %u bits.\n", bits, qs->adjustor, qs->knBits);
 	} else
 		qs->adjustor = 1, cint_dup(kN, N);
 }
 
-void qs_select_multiplier(qs_sheet *qs) {
+void selectMultiplier(QsSheet *qs) {
 	// Frequently select a small multiplier (under 8-bit) that will save time and memory.
 	// After it, the algorithm will factor kN instead of N, where k is a constant named "multiplier".
 	const uint32 mul = (uint32) qs->state->params.qs_multiplier ;
@@ -214,9 +214,9 @@ void qs_select_multiplier(qs_sheet *qs) {
 		uint32 best[total_best];
 		for (int i = qs->state->params.verbose < 2; i < 2; ++i) {
 			if (i)
-				qs_score_default_multipliers(qs, best, total_best);
+				scoreDefaultMultipliers(qs, best, total_best);
 			else
-				qs_score_alternative_multipliers(qs, best, total_best);
+				scoreAlternativeMultipliers(qs, best, total_best);
 			DEBUG_LEVEL_4("%s", "Suggested multipliers are [");
 			for (size_t j = 0; j < total_best - 1; ++j)
 				DEBUG_LEVEL_4("%u, ", best[j]);
@@ -233,7 +233,7 @@ void qs_select_multiplier(qs_sheet *qs) {
 	}
 }
 
-void qs_score_default_multipliers(qs_sheet *qs, uint32 *caller_res, const size_t caller_res_len) {
+void scoreDefaultMultipliers(QsSheet *qs, uint32 *caller_res, const size_t caller_res_len) {
 	// Choose a multiplier that make the input more favorable for smoothness
 	// over the future factor base, and lead to faster relation gathering.
 	struct {
@@ -255,7 +255,7 @@ void qs_score_default_multipliers(qs_sheet *qs, uint32 *caller_res, const size_t
 		}
 	}
 
-	const int limit = qs->n_bits * qs->n_bits >> 5 ;
+	const int limit = qs->nBits * qs->nBits >> 5 ;
 	for (uint32 prime = 3; prime < limit; prime += 2)
 		if (isTinyPrime(prime)) {
 			// Normal case against the odd primes.
@@ -279,7 +279,7 @@ void qs_score_default_multipliers(qs_sheet *qs, uint32 *caller_res, const size_t
 		caller_res[i] = res[i].mul ;
 }
 
-void qs_score_alternative_multipliers(qs_sheet *qs, uint32 *caller_res, const size_t caller_res_len) {
+void scoreAlternativeMultipliers(QsSheet *qs, uint32 *caller_res, const size_t caller_res_len) {
 	// Choose a multiplier that make the input more favorable for smoothness
 	// over the future factor base, and lead to faster relation gathering.
 	struct {
@@ -326,7 +326,7 @@ void qs_score_alternative_multipliers(qs_sheet *qs, uint32 *caller_res, const si
 		caller_res[i] = res[i].mul ;
 }
 
-void qs_allocate_memory(qs_sheet *qs) {
+void allocateMemory(QsSheet *qs) {
 	void *mem;
 	mem = qs->mem.base = calloc(1, qs->mem.bytes_allocated);
 	assert(mem);
@@ -410,7 +410,7 @@ void qs_allocate_memory(qs_sheet *qs) {
 	qs->relations.data = memAligned(qs->lanczos.snapshot + relations_size);
 	qs->divisors.data = memAligned(qs->relations.data + relations_size);
 	// A lot of divisors isn't needed because the algorithm calculate their GCD to reduce N.
-	qs->mem.now = memAligned(qs->divisors.data + (qs->n_bits * qs->n_bits >> 8));
+	qs->mem.now = memAligned(qs->divisors.data + (qs->nBits * qs->nBits >> 8));
 
 	const uint32 n_trees = (uint32) (sizeof(qs->uniqueness) / sizeof(struct avl_manager));
 	for (uint32 i = 0; i < n_trees; ++i) {
@@ -424,7 +424,7 @@ void qs_allocate_memory(qs_sheet *qs) {
 	DEBUG_LEVEL_4("Allocated %u MB of memory with a %u KB structure.\n", qs->mem.bytes_allocated >> 20, (unsigned)((char*)qs->mem.now - (char*)qs->mem.base) >> 10);
 }
 
-void qs_generate_factor_base(qs_sheet *qs) {
+void generateFactorBase(QsSheet *qs) {
 	// Prepare the factor base (a set of small prime numbers used to find smooth numbers).
 	static const double inv_ln_2 = 1.4426950408889634;
 	cint *A = qs->vars.TEMP, *B = A + 1, *C = A + 2;
@@ -456,7 +456,7 @@ void qs_generate_factor_base(qs_sheet *qs) {
 	DEBUG_LEVEL_4("The factor base of %u suitable primes ends with %u.\n", qs->base.length, qs->base.largest);
 }
 
-void qs_setup_polynomial_parameters(qs_sheet *qs) {
+void setupPolynomialParameters(QsSheet *qs) {
 	// completes the configuration by the algorithm itself.
 	// computes D : a template (optimal value of hypercube) for the A polynomial coefficient.
 	uint32 i, min, span;
@@ -483,7 +483,7 @@ void qs_setup_polynomial_parameters(qs_sheet *qs) {
 	assert(qs->poly.span.x_2 < qs->base.length);
 }
 
-void get_started_iteration(qs_sheet *qs) {
+void getStartedIteration(QsSheet *qs) {
 	if (qs->lanczos.snapshot[0].relation) {
 		// the operation is fast, it shouldn't happen in average case.
 		// it restores the relations reduced by the linear algebra step that failed.
@@ -509,7 +509,7 @@ void get_started_iteration(qs_sheet *qs) {
 	}
 }
 
-void iteration_part_1(qs_sheet * qs, const cint * D, cint * A) {
+void iterationPart1(QsSheet * qs, const cint * D, cint * A) {
 	uint32 n_tries = 0 ; // several attempts may rarely be necessary.
 	retry:;
 	// A is a "random" product of "s" distinct prime numbers from the factor base.
@@ -544,7 +544,7 @@ void iteration_part_1(qs_sheet * qs, const cint * D, cint * A) {
 	assert(X == &qs->poly.A);
 }
 
-void iteration_part_2(qs_sheet * qs, const cint * A, cint * B) {
+void iterationPart2(QsSheet * qs, const cint * A, cint * B) {
 	cint *X = qs->vars.TEMP, *PRIME = X + 1, *Y = X + 2, *R = X + 3;
 	uint32 i, *pen = qs->s.A_indexes;
 	cint_erase(B);
@@ -568,7 +568,7 @@ void iteration_part_2(qs_sheet * qs, const cint * A, cint * B) {
 	}
 }
 
-void iteration_part_3(qs_sheet * qs, const cint * A, const cint * B) {
+void iterationPart3(QsSheet * qs, const cint * A, const cint * B) {
 	cint *Q = qs->vars.TEMP, *R = Q + 1, *PRIME = Q + 2;
 	uint64 i, j, x, y;
 	for (i = 0; i < qs->base.length; ++i) {
@@ -605,7 +605,7 @@ void iteration_part_3(qs_sheet * qs, const cint * A, const cint * B) {
 	for (i = 0; i < qs->s.values.defined; cint_left_shifti(&qs->s.data[i++].B_terms, 1));
 }
 
-uint32 iteration_part_4(const qs_sheet * qs, const uint32 nth_curve, uint32 ** corr, cint *B) {
+uint32 iterationPart4(const QsSheet * qs, const uint32 nth_curve, uint32 ** corr, cint *B) {
 	uint32 i, gray_act; // the Gray code in "nth_curve" indicates which "B_term" to consider.
 	for (i = 0; nth_curve >> i & 1; ++i);
 	if (gray_act = (nth_curve >> i & 2) != 0, gray_act)
@@ -616,7 +616,7 @@ uint32 iteration_part_4(const qs_sheet * qs, const uint32 nth_curve, uint32 ** c
 	return gray_act; // B values generated here should always be distinct.
 }
 
-void iteration_part_5(qs_sheet *  qs, const cint * kN, const cint * B) {
+void iterationPart5(QsSheet *  qs, const cint * kN, const cint * B) {
 	cint *P = qs->vars.TEMP, *Q = P + 1, *R_kN = P + 2, *R_B = P + 3, *TMP = P + 4;
 	for (uint32 a = 0; a < qs->s.values.defined; ++a) {
 		const uint32 i = qs->s.data[a].prime_index;
@@ -653,14 +653,14 @@ void iteration_part_5(qs_sheet *  qs, const cint * kN, const cint * B) {
 	}
 }
 
-void iteration_part_6(qs_sheet *qs, const cint *kN, const cint *A, const cint *B, cint *C) {
+void iterationPart6(QsSheet *qs, const cint *kN, const cint *A, const cint *B, cint *C) {
 	cint *TMP = qs->vars.TEMP, *R = TMP + 1;
 	cint_mul(B, B, TMP); // (B * B) % A = kN % A
 	cint_subi(TMP, kN); // C = (B * B - kN) / A
 	cint_div(qs->sheet, TMP, A, C, R), assert(R->mem == R->end); // div exact.
 }
 
-void iteration_part_7(qs_sheet * qs, const uint32 gray_addi, const uint32 * restrict corr) {
+void iterationPart7(QsSheet * qs, const uint32 gray_addi, const uint32 * restrict corr) {
 	// Sieve for larger prime numbers.
 	memset(qs->m.sieve, 0, qs->m.length * sizeof(*qs->m.sieve));
 	memset(qs->m.flags, 0, qs->base.length * sizeof(*qs->m.flags));
@@ -684,7 +684,7 @@ void iteration_part_7(qs_sheet * qs, const uint32 gray_addi, const uint32 * rest
 	}
 }
 
-void iteration_part_8(qs_sheet * qs, const uint32 gray_addi, const uint32 *  corr) {
+void iterationPart8(QsSheet * qs, const uint32 gray_addi, const uint32 *  corr) {
 	// Sieving means taking an interval [−M/2, +M/2] and determining for
 	// which X in [−M/2, +M/2] a given prime number divides AX^2 + 2BX + C.
 	uint8 * chunk_begin = qs->m.sieve, *chunk_end = chunk_begin;
@@ -721,20 +721,20 @@ void iteration_part_8(qs_sheet * qs, const uint32 gray_addi, const uint32 *  cor
 	memset(qs->buffer[0], 0, (walk - qs->buffer[0]) * sizeof(*walk));
 }
 
-cint * qs_divisors_uniqueness_helper(qs_sheet * qs, const cint * num) {
+cint * divisorsUniquenessHelper(QsSheet * qs, const cint * num) {
 	// Helper for uniqueness within the divisors of N.
 	struct avl_node *node;
 	node = avl_at(&qs->uniqueness[2], num) ;
 	return qs->uniqueness[2].affected ? node->key : 0 ;
 }
 
-int qs_register_divisor(qs_sheet *qs) {
+int registerDivisor(QsSheet *qs) {
 	// Register a divisor of N, combine them with GCD and identify the perfect powers.
 	// Returns 0 when the factorization is completed, 1 otherwise.
 #define IN_RANGE(F) (h_cint_compare(&qs->constants.ONE, F) < 0 && h_cint_compare(F, &qs->vars.N) < 0)
 	cint *F = &qs->vars.FACTOR, *tmp;
 	F->nat = 1 ; // Absolute value.
-	if (!(IN_RANGE(F) && (tmp = qs_divisors_uniqueness_helper(qs, F))))
+	if (!(IN_RANGE(F) && (tmp = divisorsUniquenessHelper(qs, F))))
 		return 1; // Duplicates are ignored.
 	struct task {
 		cint * num ;
@@ -750,7 +750,7 @@ int qs_register_divisor(qs_sheet *qs) {
 			pow = (int) cint_remove(qs->sheet, &qs->vars.N, curr);
 			assert(pow); // Prime factors are removed from N.
 			++qs->divisors.total_primes;
-			qs->n_bits = (uint32) cint_count_bits(&qs->vars.N);
+			qs->nBits = (uint32) cint_count_bits(&qs->vars.N);
 			// Register this prime factor in the manager's routine.
 			manager_add_factor(qs->state, curr, pow, 1);
 			if (tasks[i].origin) {
@@ -764,16 +764,16 @@ int qs_register_divisor(qs_sheet *qs) {
 				}
 				DEBUG_LEVEL_4("%*s- %s to get %s.\n", (i + 1) << 1, "", msg, cintString(qs->state, curr));
 			}
-			if (qs->n_bits != 1) {
-				DEBUG_LEVEL_4("%*s- This prime factor reduces N to %d-bit.\n", (i + 1) << 1, "", qs->n_bits);
-				if ((tmp = qs_divisors_uniqueness_helper(qs, &qs->vars.N)))
+			if (qs->nBits != 1) {
+				DEBUG_LEVEL_4("%*s- This prime factor reduces N to %d-bit.\n", (i + 1) << 1, "", qs->nBits);
+				if ((tmp = divisorsUniquenessHelper(qs, &qs->vars.N)))
 					tasks[i++] = (struct task){tmp, 1}; // 1. And allows us.
 				for (uint32 j = 0; j < qs->divisors.length; ++j) {
 					cint_dup(F, divisors[j]);
 					pow = cint_remove(qs->sheet, F, curr);
 					if (pow) {
 						divisors[j--] = divisors[--qs->divisors.length];
-						if ((tmp = qs_divisors_uniqueness_helper(qs, F)) && IN_RANGE(tmp))
+						if ((tmp = divisorsUniquenessHelper(qs, F)) && IN_RANGE(tmp))
 							tasks[i++] = (struct task){tmp, 2}; // 2. Prunes the divisors.
 					}
 				}
@@ -781,24 +781,24 @@ int qs_register_divisor(qs_sheet *qs) {
 				DEBUG_LEVEL_4("%*s- The factorization is complete since it's a prime.\n", (i + 1) << 1, "");
 		} else {
 			cint_div(qs->sheet, &qs->vars.N, curr, Q, R) ;
-			if (R->mem == R->end && IN_RANGE(Q) && (tmp = qs_divisors_uniqueness_helper(qs, Q)))
+			if (R->mem == R->end && IN_RANGE(Q) && (tmp = divisorsUniquenessHelper(qs, Q)))
 				tasks[i++] = (struct task){tmp, 3}; // 3. Divides N.
 			pow = anyRootCheck(qs->state, curr, Q, R) ;
-			if (pow && IN_RANGE(Q) && (tmp = qs_divisors_uniqueness_helper(qs, Q)))
+			if (pow && IN_RANGE(Q) && (tmp = divisorsUniquenessHelper(qs, Q)))
 				tasks[i++] = (struct task){tmp, 4}; // 4. Notes a perfect power.
 			for (uint32 j = 0; j < qs->divisors.length; ++j) {
 				cint_gcd(qs->sheet, curr, divisors[j], Q);
-				if (IN_RANGE(Q) && (tmp = qs_divisors_uniqueness_helper(qs, Q)))
+				if (IN_RANGE(Q) && (tmp = divisorsUniquenessHelper(qs, Q)))
 					tasks[i++] = (struct task){tmp, 5}; // 5. Performs GCD within the divisors.
 			}
 			divisors[qs->divisors.length++] = curr;
 		}
-	} while (i && qs->n_bits != 1);
-	return qs->n_bits != 1;
+	} while (i && qs->nBits != 1);
+	return qs->nBits != 1;
 #undef IN_RANGE
 }
 
-void register_relations(qs_sheet * qs, const cint * A, const cint * B, const cint * C) {
+void registerRelations(QsSheet * qs, const cint * A, const cint * B, const cint * C) {
 	cint *  TMP = qs->vars.TEMP, * K = &qs->vars.KEY, * V = &qs->vars.VALUE ;
 	uint32 m_idx, idx, mod;
 	// iterates the values of X in [-M/2, +M/2].
@@ -858,15 +858,15 @@ void register_relations(qs_sheet * qs, const cint * A, const cint * B, const cin
 						pen,
 				};
 				if (h_cint_compare(V, &qs->constants.ONE) == 0)
-					register_regular_relation(qs, K, prime_indexes_and_powers);
-				else if (155 < qs->kn_bits && h_cint_compare(V, &qs->constants.TOO_LARGE_PRIME) < 0)
+					registerRegularRelation(qs, K, prime_indexes_and_powers);
+				else if (155 < qs->knBits && h_cint_compare(V, &qs->constants.TOO_LARGE_PRIME) < 0)
 					//  Store it until another partial share the same variation (also called large prime, cofactor).
-					register_partial_relation(qs, K, V, prime_indexes_and_powers);
+					registerPartialRelation(qs, K, V, prime_indexes_and_powers);
 			}
 		}
 }
 
-void register_regular_relation(qs_sheet * qs, const cint * KEY, const uint32 * const restrict args[4]) {
+void registerRegularRelation(QsSheet * qs, const cint * KEY, const uint32 * const restrict args[4]) {
 	struct avl_node *node = avl_at(&qs->uniqueness[0], KEY);
 	if (node->value)
 		return; // duplicates at this stage are ignored.
@@ -918,7 +918,7 @@ void register_regular_relation(qs_sheet * qs, const cint * KEY, const uint32 * c
 	}
 }
 
-void register_partial_relation(qs_sheet * qs, const cint * KEY, const cint * VALUE, const uint32 * const restrict args[4]) {
+void registerPartialRelation(QsSheet * qs, const cint * KEY, const cint * VALUE, const uint32 * const restrict args[4]) {
 	// Process the single large-prime variation.
 	// Searches 2 different KEY sharing the same VALUE.
 	struct avl_node *node = avl_at(&qs->uniqueness[1], VALUE);
@@ -946,7 +946,7 @@ void register_partial_relation(qs_sheet * qs, const cint * KEY, const cint * VAL
 				cint_gcd(qs->sheet, VALUE, &qs->constants.kN, &qs->vars.FACTOR);
 				cint_div(qs->sheet, &qs->vars.N, &qs->vars.FACTOR, A, B);
 				if (B->mem == B->end) // found a small factor of N ?
-					qs_register_divisor(qs);
+					registerDivisor(qs);
 				return; // nothing.
 			} else
 				BEZOUT = A;
@@ -999,7 +999,7 @@ void register_partial_relation(qs_sheet * qs, const cint * KEY, const cint * VAL
 					if (data[i]) // writes [index of the prime number, power]
 						*pen++ = i, *pen++ = data[i];
 				args = (const uint32 * restrict const[4]){ begin, pen, 0, 0, };
-				register_regular_relation(qs, &qs->vars.KEY, args);
+				registerRegularRelation(qs, &qs->vars.KEY, args);
 				++qs->relations.length.by_partial;
 				memset(begin, 0, (char *) pen - (char *) begin); // zeroed.
 			}
@@ -1008,14 +1008,14 @@ void register_partial_relation(qs_sheet * qs, const cint * KEY, const cint * VAL
 	}
 }
 
-void qs_factorize_using_null_vectors(qs_sheet * qs, const uint64_t * restrict const lanczos_answer) {
+void factorizeUsingNullVectors(QsSheet * qs, const uint64_t * restrict const lanczos_answer) {
 	// Block Lanczos linear algebra answer is simply "mask followed by null_rows", with read-only.
 	if (*lanczos_answer == 0)
 		return;
 	const uint64_t mask = *lanczos_answer, * restrict null_rows = lanczos_answer + 1;
 	cint *X = &qs->vars.X, *Y = qs->vars.TEMP, *TMP = Y + 1, *POW = Y + 2;
 	uint32 * restrict power_of_primes;
-	for(uint32 row = 0; row < 64 && qs->n_bits != 1; ++row)
+	for(uint32 row = 0; row < 64 && qs->nBits != 1; ++row)
 		if (mask >> row & 1){
 			// use the Fermat's (1607 - 1665) method to compute a factorization of N.
 			intToCint(X, 1), intToCint(TMP, 1), intToCint(Y, 1);
@@ -1041,14 +1041,14 @@ void qs_factorize_using_null_vectors(qs_sheet * qs, const uint64_t * restrict co
 			if (Y->mem != Y->end) {
 				cint_gcd(qs->sheet, &qs->vars.N, Y, &qs->vars.FACTOR);
 				// 100 digits RSA number has been factored by the software in 2022.
-				if (qs_register_divisor(qs) == 0)
+				if (registerDivisor(qs) == 0)
 					break;
 			}
 		}
 }
 
-int qs_process_remaining_factors(qs_sheet *qs) {
-	if (qs->n_bits != 1 && qs->divisors.length) {
+int processRemainingFactors(QsSheet *qs) {
+	if (qs->nBits != 1 && qs->divisors.length) {
 		// In rare cases N must be partially factored.
 		// Registers a divisor encountered by the algorithm in the manager routine.
 		cint **divisors = qs->divisors.data, *tmp;
@@ -1061,7 +1061,7 @@ int qs_process_remaining_factors(qs_sheet *qs) {
 				if (power) {
 					DEBUG_LEVEL_4("Quadratic Sieve submits the composite divisor %s as a result.\n", cintString(qs->state, divisors[i]));
 					manager_add_factor(qs->state, divisors[i], power, -1); // -1 marks this divisor as composite for recursive factorization.
-					qs->n_bits = (uint32) cint_count_bits(&qs->vars.N);
+					qs->nBits = (uint32) cint_count_bits(&qs->vars.N);
 				}
 			} else
 				break; // No need to sort more.
@@ -1076,7 +1076,7 @@ int qs_process_remaining_factors(qs_sheet *qs) {
 	DEBUG_LEVEL_4("Used %u MB of memory during %.02f second(s).\n", (unsigned) ((char *) qs->mem.now - (char *) qs->mem.base) >> 20, 0.001 * (getTime() - qs->time.start));
 
 	// Tells the factorization manager whether its task has progressed using the Quadratic Sieve.
-	const int has_fully_factored = qs->n_bits == 1, has_partially_factored = qs->divisors.length != 0 ;
+	const int has_fully_factored = qs->nBits == 1, has_partially_factored = qs->divisors.length != 0 ;
 	const int res = has_fully_factored || has_partially_factored ;
 	if (res) // Updates the input number accordingly, since the algorithm worked on a copy of it.
 		cint_dup(&qs->state->session.num, &qs->vars.N);

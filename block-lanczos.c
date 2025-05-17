@@ -3,7 +3,7 @@
 
 // Kornél Lánczos (1893 - 1974) was a Hungarian-American and later Hungarian-Irish mathematician and physicist.
 
-void lanczos_mul_MxN_Nx64(const qs_sheet *qs, const uint64_t *X, const uint32 max_size, uint64_t *Y) {
+void lanczos_mul_MxN_Nx64(const QsSheet *qs, const uint64_t *X, const uint32 max_size, uint64_t *Y) {
 	assert(Y != X);
 	memset(Y, 0, max_size * sizeof(uint64_t));
 	for (uint32 a = 0, b; a < qs->relations.length.now; ++a) {
@@ -13,7 +13,7 @@ void lanczos_mul_MxN_Nx64(const qs_sheet *qs, const uint64_t *X, const uint32 ma
 	}
 }
 
-void lanczos_mul_trans_MxN_Nx64(const qs_sheet *qs, const uint64_t *X, uint64_t *Y) {
+void lanczos_mul_trans_MxN_Nx64(const QsSheet *qs, const uint64_t *X, uint64_t *Y) {
 	assert(Y != X);
 	for (uint32 a = 0, b; a < qs->relations.length.now; ++a) {
 		struct qs_relation *const rel = qs->relations.data[a];
@@ -22,7 +22,7 @@ void lanczos_mul_trans_MxN_Nx64(const qs_sheet *qs, const uint64_t *X, uint64_t 
 	}
 }
 
-void lanczos_mul_64xN_Nx64(const qs_sheet *qs, const uint64_t *X, const uint64_t *Y, uint64_t *Z, uint64_t *T) {
+void lanczos_mul_64xN_Nx64(const QsSheet *qs, const uint64_t *X, const uint64_t *Y, uint64_t *Z, uint64_t *T) {
 	assert(X != Z && Y != Z);
 	uint32 a, b, c, d;
 	memset(Z, 0, 256 * 8 * sizeof(*Z));
@@ -111,7 +111,7 @@ uint64_t lanczos_find_non_singular_sub(const uint64_t *t, const uint64_t *last_s
 	return dim;
 }
 
-void lanczos_mul_Nx64_64x64_acc(qs_sheet *qs, const uint64_t *X, const uint64_t *Y, uint64_t *Z, uint64_t *T) {
+void lanczos_mul_Nx64_64x64_acc(QsSheet *qs, const uint64_t *X, const uint64_t *Y, uint64_t *Z, uint64_t *T) {
 	uint32 a;
 	uint64_t b, c, d, e;
 	for (b = 0; b < 8; Y += 8, Z += 256, ++b)
@@ -134,7 +134,7 @@ void lanczos_mul_64x64_64x64(const uint64_t *X, const uint64_t *Y, uint64_t *Z) 
 	memcpy(Z, tmp, sizeof(tmp));
 }
 
-void lanczos_transpose_vector(qs_sheet *qs, const uint64_t *X, uint64_t **Y) {
+void lanczos_transpose_vector(QsSheet *qs, const uint64_t *X, uint64_t **Y) {
 	uint32 a; // Z will be zeroed automatically by the loop.
 	uint64_t b, c, d, *Z;
 	Z = memcpy(qs->mem.now, X, qs->relations.length.now * sizeof(*X));
@@ -143,7 +143,7 @@ void lanczos_transpose_vector(qs_sheet *qs, const uint64_t *X, uint64_t **Y) {
 			Y[b][c] |= (Z[a] & 1) * d;
 }
 
-void lanczos_combine_cols(qs_sheet *qs, uint64_t *x, uint64_t *v, uint64_t *ax, uint64_t *av) {
+void lanczos_combine_cols(QsSheet *qs, uint64_t *x, uint64_t *v, uint64_t *ax, uint64_t *av) {
 	// Use Gaussian elimination on the columns of [ax | av] to find all linearly dependent columns.
 	uint32 i, j, bit_pos, num_deps;
 	uint64_t k, col, col_words;
@@ -198,7 +198,7 @@ void lanczos_combine_cols(qs_sheet *qs, uint64_t *x, uint64_t *v, uint64_t *ax, 
 	qs->mem.now = memset(open, 0, close - open);
 }
 
-void lanczos_build_array(qs_sheet *qs, uint64_t **target, const size_t quantity, const size_t size) {
+void lanczos_build_array(QsSheet *qs, uint64_t **target, const size_t quantity, const size_t size) {
 	// ensure it remains memory for linear algebra
 	const char *mem_needs = (char *) qs->mem.now + quantity * size * sizeof(uint64_t);
 	const char *mem_ends = (char *) qs->mem.now + qs->mem.bytes_allocated;
@@ -207,7 +207,7 @@ void lanczos_build_array(qs_sheet *qs, uint64_t **target, const size_t quantity,
 		target[i] = qs->mem.now, qs->mem.now = memAligned(target[i] + size);
 }
 
-uint64_t *lanczos_block_worker(qs_sheet *qs) {
+uint64_t *lanczos_block_worker(QsSheet *qs) {
 	const uint32 n_cols = qs->relations.length.now, v_size = n_cols > qs->base.length ? n_cols : qs->base.length;
 	const uint64_t safe_size = qs->lanczos.safe_length;
 	uint64_t *md[6], *xl[2], *sm[13], *tmp, *res, mask_0, mask_1;
@@ -300,12 +300,12 @@ uint64_t *lanczos_block_worker(qs_sheet *qs) {
 	return res;
 }
 
-void lanczos_reduce_matrix(qs_sheet *qs) {
+void lanczos_reduce_matrix(QsSheet *qs) {
 	// a filtering is not always necessary to make "lanczos_block_worker" succeed :
 	// - it writes to the relations [ Y lengths, relation counter ] will change
 	uint32 a, b, c, row, col, reduced_rows = qs->base.length, *counts;
 	counts = memset(qs->buffer[1], 0, qs->base.length * sizeof(*qs->buffer[1]));
-	if (qs->sieve_again_perms)
+	if (qs->sieveAgainPerms)
 		for (a = 0; a < qs->relations.length.now; ++a) {
 			// "snapshot" pointers, so they can be restored if "sieve again" is fired.
 			qs->lanczos.snapshot[a].relation = qs->relations.data[a];
@@ -342,7 +342,7 @@ void lanczos_reduce_matrix(qs_sheet *qs) {
 	DEBUG_LEVEL_4("[x] Maintenance of linear algebra reduces the relations from %u to %u.\n", qs->relations.length.prev, qs->relations.length.now);
 }
 
-uint64_t *block_lanczos(qs_sheet *qs) {
+uint64_t *block_lanczos(QsSheet *qs) {
 	// the worker algorithm is probabilistic with high success rate.
 	// it is interested in the Y field of the relations (to build its matrix).
 	// it receives as input the relations (reduced or not, depending on the settings).
