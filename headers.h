@@ -368,8 +368,6 @@ static uint64_t *blockLanczos(QSSheet *);
 // Verbose level 3: also show maintenance messages.
 // Verbose level 4: also show Quadratic Sieve detailed information.
 
-#define DEBUG_LEVEL_2(fmt, ...) debugPrint(qs->state, 2, fmt, __VA_ARGS__)
-#define DEBUG_LEVEL_3(fmt, ...) debugPrint(qs->state, 3, fmt, __VA_ARGS__)
-#define DEBUG_LEVEL_4(fmt, ...) debugPrint(qs->state, 4, fmt, __VA_ARGS__)
+#define LOGGER(level, fmt, ...) debugPrint(qs->state, level, fmt, __VA_ARGS__)
 
 #endif //FAC_HEADERS

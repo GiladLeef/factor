@@ -59,7 +59,7 @@ int innerContinuationCondition(QSSheet *qs) {
 		if (qs->state->params.tty && qs->state->params.verbose)
 			displayProgress("Quadratic Sieve", pct); // progress isn't linear.
 		else if ((uint32)qs->time.prev_pct != (uint32)pct)
-			DEBUG_LEVEL_4("%s", answer && !(qs->time.prev_pct < 50. && 50. <= pct) ? "." : ".\n");
+			LOGGER(4, "%s", answer && !(qs->time.prev_pct < 50. && 50. <= pct) ? "." : ".\n");
 		qs->time.prev_pct = pct;
 	}
 	return answer;
@@ -78,7 +78,7 @@ int outerContinuationCondition(QSSheet *qs) {
 	if (answer) {
 		uint32 new_needs = qs->relations.length.needs;
 		new_needs += new_needs >> (2 + qs->sieveAgainPerms);
-		DEBUG_LEVEL_3("[x] Maintenance re-evaluates the needs for %u additional relations.\n", new_needs - qs->relations.length.needs);
+		LOGGER(3, "[x] Maintenance re-evaluates the needs for %u additional relations.\n", new_needs - qs->relations.length.needs);
 		qs->relations.length.needs = new_needs ;
 	}
 	return answer;
@@ -89,7 +89,7 @@ void parametrize(QSSheet *qs) {
 	const uint32 bits = qs->knBits; // N adjusted has at least 115-bit.
 	qs->knBits = (uint32) cint_count_bits(qs->state->session.tmp); // kN may be slight larger.
 
-	DEBUG_LEVEL_4("N is a %u-bit number, and kN is a %u-bit number using %u words.\n", (uint32) cint_count_bits(&qs->state->session.num), qs->knBits, (unsigned)(qs->state->session.tmp->end - qs->state->session.tmp->mem));
+	LOGGER(4, "N is a %u-bit number, and kN is a %u-bit number using %u words.\n", (uint32) cint_count_bits(&qs->state->session.num), qs->knBits, (unsigned)(qs->state->session.tmp->end - qs->state->session.tmp->mem));
 
 	uint64 tmp ;
 	// params as { bits, value } take the extremal value if bits exceed.
@@ -99,7 +99,7 @@ void parametrize(QSSheet *qs) {
 	static const double param_laziness [][2]= {{150, 95}, {220, 100}, {0} };
 	// collecting more/fewer relations than recommended (in percentage).
 	qs->relations.length.needs = qs->base.length * ((tmp = qs->state->params.QSlaziness) ? tmp : linearParamResolution(param_laziness, bits)) / 100;
-	DEBUG_LEVEL_4("The algorithm use the seed %" PRIu64 " and targets %u relations.\n", qs->state->params.rand.custom, qs->relations.length.needs);
+	LOGGER(4, "The algorithm use the seed %" PRIu64 " and targets %u relations.\n", qs->state->params.rand.custom, qs->relations.length.needs);
 
 	static const double param_m_value [][2]= { {120, 1}, {330, 6}, {0} };
 	qs->m.length = (qs->m.lengthHalf = (qs->state->params.QSsieve ? qs->state->params.QSsieve : 31744) * linearParamResolution(param_m_value, bits)) << 1;
@@ -130,18 +130,17 @@ void parametrize(QSSheet *qs) {
 	qs->iterativeList[3] = large_base >> 1; // mid
 	qs->iterativeList[4] = large_base; // sec
 
-	DEBUG_LEVEL_4("The iterative list contains %u, %u, %u and %u.\n", qs->iterativeList[1], qs->iterativeList[2], qs->iterativeList[3], qs->iterativeList[4]);
+	LOGGER(4, "The iterative list contains %u, %u, %u and %u.\n", qs->iterativeList[1], qs->iterativeList[2], qs->iterativeList[3], qs->iterativeList[4]);
 
 	const uint64 last_prime_in_base = (uint64) (qs->base.length * 2.5 * log(qs->base.length));
 	qs->relations.tooLargePrime = (tmp = qs->state->params.QSlarge_prime) ? tmp : last_prime_in_base << 4;
 
-	if (155 < qs->knBits)
-		DEBUG_LEVEL_4("The single large-prime variation is being processed under %" PRIu64 ".\n", qs->relations.tooLargePrime);
+	LOGGER(4, "The single large-prime variation is being processed under %" PRIu64 ".\n", qs->relations.tooLargePrime);
 
 	qs->s.values.doubleValue = (qs->s.values.defined = (qs->s.values.subtractOne = bits / 28) + 1) << 1;
 	qs->poly.grayMax = 1 << (qs->s.values.defined - 3); // computing the roots of f(x) once for all these polynomials.
 
-	DEBUG_LEVEL_4("Other params include sieve=%u, errorBits=%u, threshold=%u and s=%u.\n", qs->m.lengthHalf, qs->errorBits, qs->threshold.value, qs->s.values.defined);
+	LOGGER(4, "Other params include sieve=%u, errorBits=%u, threshold=%u and s=%u.\n", qs->m.lengthHalf, qs->errorBits, qs->threshold.value, qs->s.values.defined);
 
 	// The algorithm itself completes its configuration during the last preparation part.
 	assert(qs->s.values.defined >= 3);
@@ -171,7 +170,7 @@ uint32 linearParamResolution(const double v[][2], const uint32 point) {
 void initializeState(QSSheet *qs, state *state, int bits) {
 	// initializing (until kN is computed) with manager resources.
 	qs->state = state;
-	DEBUG_LEVEL_4("\nQuadratic Sieve on %s.\n", cintString(state, &state->session.num));
+	LOGGER(4, "\nQuadratic Sieve on %s.\n", cintString(state, &state->session.num));
 	qs->sheet = state->session.sheet;
 	qs->seed = state->session.seed;
 	qs->nBits = qs->knBits = bits;
@@ -197,7 +196,7 @@ void adjustInputSize(QSSheet *qs) {
 		intToCint(ADJUSTOR, qs->adjustor);
 		cint_mul(N, ADJUSTOR, kN);
 		qs->knBits = (uint32) cint_count_bits(kN);
-		DEBUG_LEVEL_4("Input (%u bits) is multiplied by %" PRIu64 " to reach %u bits.\n", bits, qs->adjustor, qs->knBits);
+		LOGGER(4, "Input (%u bits) is multiplied by %" PRIu64 " to reach %u bits.\n", bits, qs->adjustor, qs->knBits);
 	} else
 		qs->adjustor = 1, cint_dup(kN, N);
 }
@@ -207,7 +206,7 @@ void selectMultiplier(QSSheet *qs) {
 	// After it, the algorithm will factor kN instead of N, where k is a constant named "multiplier".
 	const uint32 mul = (uint32) qs->state->params.QSmultiplier ;
 	if (mul){
-		DEBUG_LEVEL_4("The multiplier is %u.\n", mul);
+		LOGGER(4, "The multiplier is %u.\n", mul);
 		qs->multiplier = mul ;
 	} else {
 		const size_t total_best = 7;
@@ -217,13 +216,13 @@ void selectMultiplier(QSSheet *qs) {
 				scoreDefaultMultipliers(qs, best, total_best);
 			else
 				scoreAlternativeMultipliers(qs, best, total_best);
-			DEBUG_LEVEL_4("%s", "Suggested multipliers are [");
+			LOGGER(4, "%s", "Suggested multipliers are [");
 			for (size_t j = 0; j < total_best - 1; ++j)
-				DEBUG_LEVEL_4("%u, ", best[j]);
-			DEBUG_LEVEL_4("%u]%s", best[total_best - 1], i ? "" : ".\n");
+				LOGGER(4, "%u, ", best[j]);
+			LOGGER(4, "%u]%s", best[total_best - 1], i ? "" : ".\n");
 		}
 		qs->multiplier = *best;
-		DEBUG_LEVEL_4(", so use %u.\n", *best);
+		LOGGER(4, ", so use %u.\n", *best);
 	}
 	if (1 < qs->multiplier) {
 		cint *kN = qs->state->session.tmp, *MUL = kN + 1, *N = kN + 2 ;
@@ -336,7 +335,7 @@ void allocateMemory(QSSheet *qs) {
 	// the Quadratic Sieve variables can store at most kN ^ 2 in terms of bits
 	const size_t vars_size = kn_size << 1 ;
 
-	DEBUG_LEVEL_4("The underlying calculations use %u-bit variables.\n", (unsigned)(vars_size * cint_exponent));
+	LOGGER(4, "The underlying calculations use %u-bit variables.\n", (unsigned)(vars_size * cint_exponent));
 
 	const size_t buffers_size = qs->base.length + (qs->iterativeList[1] << 1);
 	// more relation pointers than "guessed" are available (sieve again feature).
@@ -421,7 +420,7 @@ void allocateMemory(QSSheet *qs) {
 		// they use default sign-less comparator.
 	}
 	avl_at(&qs->uniqueness[2], &qs->constants.one); // Ignore 1 as a divisor of N.
-	DEBUG_LEVEL_4("Allocated %u MB of memory with a %u KB structure.\n", qs->mem.bytesAllocated >> 20, (unsigned)((char*)qs->mem.now - (char*)qs->mem.base) >> 10);
+	LOGGER(4, "Allocated %u MB of memory with a %u KB structure.\n", qs->mem.bytesAllocated >> 20, (unsigned)((char*)qs->mem.now - (char*)qs->mem.base) >> 10);
 }
 
 void generateFactorBase(QSSheet *qs) {
@@ -453,7 +452,7 @@ void generateFactorBase(QSSheet *qs) {
 	// 2.5 * (base size) * ln(base size) is close to the largest prime number in factor base.
 	qs->base.largest = qs->base.data[i - 1].num ;
 
-	DEBUG_LEVEL_4("The factor base of %u suitable primes ends with %u.\n", qs->base.length, qs->base.largest);
+	LOGGER(4, "The factor base of %u suitable primes ends with %u.\n", qs->base.length, qs->base.largest);
 }
 
 void setupPolynomialParameters(QSSheet *qs) {
@@ -472,7 +471,7 @@ void setupPolynomialParameters(QSSheet *qs) {
 	const uint32 root = (uint32) cintToInt(R) ;
 	for (i = 1; qs->base.data[i].num <= root; ++i, assert(i < qs->base.length));
 	if (i < span) {
-		DEBUG_LEVEL_3("[x] Maintenance adjusts the span value from %u to %u.\n", span, i);
+		LOGGER(3, "[x] Maintenance adjusts the span value from %u to %u.\n", span, i);
 		span = i; // Avoids a rare case of failure when factoring small numbers (graceful degradation).
 	}
 	assert(i >= span);
@@ -495,13 +494,13 @@ void getStartedIteration(QSSheet *qs) {
 		}
 		assert(qs->relations.length.prev == i) ;
 		qs->relations.length.now = i;
-		DEBUG_LEVEL_4("[x] Maintenance restores the relations to a size of %u.\n", i);
+		LOGGER(4, "[x] Maintenance restores the relations to a size of %u.\n", i);
 	}
 	//  Increase the tick value in each iteration of the algorithm.
 	if (++qs->time.tick % 32 == 0) {
 		if (qs->relations.length.prev == qs->relations.length.now) {
 			// The algorithm notices that no relations accumulates, and reacts to unblock the situation.
-			DEBUG_LEVEL_3("[x] Maintenance randomizes D because the relation counter remains at %u.\n", qs->relations.length.now);
+			LOGGER(3, "[x] Maintenance randomizes D because the relation counter remains at %u.\n", qs->relations.length.now);
 			cint_random_bits(&qs->poly.D, qs->poly.dBits, qs->seed);
 			*qs->poly.D.mem |= 1; // Shouldn't happen, D becomes a randomized odd number.
 		}
@@ -530,7 +529,7 @@ void iterationPart1(QSSheet * qs, const cint * D, cint * A) {
 	for (j = 0; j < qs->s.values.subtractOne; j = i == qs->s.data[j].primeIndex ? ++i, 0 : j + 1);
 	if (qs->base.length <= i) {
 		const char *ord = n_tries == 0 ? "st" : n_tries == 1 ? "nd" : n_tries == 2 ? "rd" : "th" ;
-		DEBUG_LEVEL_3("[x] Maintenance discards A=%s on %u%s attempt.\n", cintString(qs->state, A), n_tries + 1, ord);
+		LOGGER(3, "[x] Maintenance discards A=%s on %u%s attempt.\n", cintString(qs->state, A), n_tries + 1, ord);
 		assert(++n_tries <= 16); // clearly shouldn't happen 16 times, review the algorithm parameters otherwise.
 		A = _A ;
 		goto retry;
@@ -740,7 +739,7 @@ int registerDivisor(QSSheet *qs) {
 	cint *curr, **divisors = qs->divisors.data, *Q = qs->vars.temp + 3, *R = Q + 1;
 	int i = 0, pow;
 	tasks[i++] = (struct task) {tmp, 0};
-	DEBUG_LEVEL_4("- New divisor %s shown.\n", cintString(qs->state, tmp));
+	LOGGER(4, "- New divisor %s shown.\n", cintString(qs->state, tmp));
 	do {
 		curr = tasks[--i].num; // Retrieve the top element.
 		if (cint_is_prime(qs->sheet, curr, -1, qs->seed)) {
@@ -759,10 +758,10 @@ int registerDivisor(QSSheet *qs) {
 					case 4 : msg = "Notes a perfect power"; break;
 					case 5 : msg = "Performs GCD within the divisors"; break;
 				}
-				DEBUG_LEVEL_4("%*s- %s to get %s.\n", (i + 1) << 1, "", msg, cintString(qs->state, curr));
+				LOGGER(4, "%*s- %s to get %s.\n", (i + 1) << 1, "", msg, cintString(qs->state, curr));
 			}
 			if (qs->nBits != 1) {
-				DEBUG_LEVEL_4("%*s- This prime factor reduces N to %d-bit.\n", (i + 1) << 1, "", qs->nBits);
+				LOGGER(4, "%*s- This prime factor reduces N to %d-bit.\n", (i + 1) << 1, "", qs->nBits);
 				if ((tmp = divisorsUniquenessHelper(qs, &qs->vars.n)))
 					tasks[i++] = (struct task){tmp, 1}; // 1. And allows us.
 				for (uint32 j = 0; j < qs->divisors.length; ++j) {
@@ -775,7 +774,7 @@ int registerDivisor(QSSheet *qs) {
 					}
 				}
 			} else
-				DEBUG_LEVEL_4("%*s- The factorization is complete since it's a prime.\n", (i + 1) << 1, "");
+				LOGGER(4, "%*s- The factorization is complete since it's a prime.\n", (i + 1) << 1, "");
 		} else {
 			cint_div(qs->sheet, &qs->vars.n, curr, Q, R) ;
 			if (R->mem == R->end && IN_RANGE(Q) && (tmp = divisorsUniquenessHelper(qs, Q)))
@@ -909,7 +908,7 @@ void registerRegularRelation(QSSheet * qs, const cint * KEY, const uint32 * cons
 		qs->mem.now = rel->axis.Z.data + rel->axis.Z.length;
 		rel->id = ++qs->relations.length.now; // Keep the relation.
 	} else {
-		DEBUG_LEVEL_3("[x] Maintenance discards the relation at index %u.\n", qs->relations.length.now);
+		LOGGER(3, "[x] Maintenance discards the relation at index %u.\n", qs->relations.length.now);
 		char * open = (char*) rel, * close = qs->mem.now ;
 		qs->mem.now = memset(open, 0, close - open); // Throw.
 	}
@@ -1056,7 +1055,7 @@ int processRemainingFactors(QSSheet *qs) {
 			if (h_cint_compare(&qs->constants.one, divisors[i]) < 0 && h_cint_compare(divisors[i], &qs->vars.n) < 0) {
 				const int power = (int) cint_remove(qs->sheet, &qs->vars.n, divisors[i]);
 				if (power) {
-					DEBUG_LEVEL_4("Quadratic Sieve submits the composite divisor %s as a result.\n", cintString(qs->state, divisors[i]));
+					LOGGER(4, "Quadratic Sieve submits the composite divisor %s as a result.\n", cintString(qs->state, divisors[i]));
 					manager_add_factor(qs->state, divisors[i], power, -1); // -1 marks this divisor as composite for recursive factorization.
 					qs->nBits = (uint32) cint_count_bits(&qs->vars.n);
 				}
@@ -1064,13 +1063,13 @@ int processRemainingFactors(QSSheet *qs) {
 				break; // No need to sort more.
 		}
 		// Recursively running the Quadratic Sieve will allow faster factorization than this oversized instance.
-		DEBUG_LEVEL_3("[x] Maintenance is to forward the remainder %s.\n", cintString(qs->state, &qs->vars.n));
+		LOGGER(3, "[x] Maintenance is to forward the remainder %s.\n", cintString(qs->state, &qs->vars.n));
 	}
 
 	if (qs->uniqueness[1].count)
-		DEBUG_LEVEL_4("The sieve reported %u partials which added %u smooth relations.\n", (unsigned) qs->uniqueness[1].count, qs->relations.length.byPartial);
-	DEBUG_LEVEL_4("The algorithm completed with %u polynomials and %u relations.\n", qs->poly.curves, qs->relations.length.peak);
-	DEBUG_LEVEL_4("Used %u MB of memory during %.02f second(s).\n", (unsigned) ((char *) qs->mem.now - (char *) qs->mem.base) >> 20, 0.001 * (getTime() - qs->time.start));
+		LOGGER(4, "The sieve reported %u partials which added %u smooth relations.\n", (unsigned) qs->uniqueness[1].count, qs->relations.length.byPartial);
+	LOGGER(4, "The algorithm completed with %u polynomials and %u relations.\n", qs->poly.curves, qs->relations.length.peak);
+	LOGGER(4, "Used %u MB of memory during %.02f second(s).\n", (unsigned) ((char *) qs->mem.now - (char *) qs->mem.base) >> 20, 0.001 * (getTime() - qs->time.start));
 
 	// Tells the factorization manager whether its task has progressed using the Quadratic Sieve.
 	const int has_fully_factored = qs->nBits == 1, has_partially_factored = qs->divisors.length != 0 ;

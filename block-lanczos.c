@@ -339,7 +339,7 @@ void lanczos_reduce_matrix(QSSheet *qs) {
 			qs->relations.length.now = b;
 		}
 	} while (row != reduced_rows);
-	DEBUG_LEVEL_4("[x] Maintenance of linear algebra reduces the relations from %u to %u.\n", qs->relations.length.prev, qs->relations.length.now);
+	LOGGER(4, "[x] Maintenance of linear algebra reduces the relations from %u to %u.\n", qs->relations.length.prev, qs->relations.length.now);
 }
 
 uint64_t *blockLanczos(QSSheet *qs) {
@@ -368,7 +368,7 @@ uint64_t *blockLanczos(QSSheet *qs) {
 		res = lanczos_block_worker(qs);
 		if(*res) {
 			const char *ord = i == 0 ? "st" : i == 1 ? "nd" : i == 2 ? "rd" : "th" ;
-			DEBUG_LEVEL_4("Linear algebra passed on %u%s attempt after %u iterations.\n", i + 1, ord, qs->lanczos.nIterations);
+			LOGGER(4, "Linear algebra passed on %u%s attempt after %u iterations.\n", i + 1, ord, qs->lanczos.nIterations);
 			break;
 		}
 	}
