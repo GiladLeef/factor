@@ -49,9 +49,8 @@ typedef struct {
 		uint64 QSlarge_prime;
 		uint64 QSpoly;
 		uint64 QSlaziness;
-		//
-		uint64 QSsieve_cutoff; // not documented (see the source code)
-		uint64 QStick_end; // not documented (see the source code)
+		uint64 QSsieve_cutoff; 
+		uint64 QStick_end; 
 	} params;
 	uint64 duration_ms ;
 	FILE *in;
