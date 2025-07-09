@@ -261,7 +261,7 @@ static int readKeyAnd3Values(const char **, state *);
 static int readKeyAnd2Values(const char **, state *);
 static int readKeyValue(const char **, state *);
 static int readFlags(const char **, state *);
-static void random(cint_sheet *, uint64_t *, cint *, char *, int, int);
+static void rand_cint(cint_sheet *, uint64_t *, cint *, char *, int, int);
 static void generateInputFile(state *);
 static char *cintString(state *, const cint *);
 static inline void inlineCint(cint *, size_t, void **);

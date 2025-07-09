@@ -142,7 +142,7 @@ int readFlags(const char **argv, state *state) {
 	return 1;
 }
 
-void random(cint_sheet *sheet, uint64_t *seed, cint *nums, char *comment, const int factors_needed, const int bits_needed) {
+void rand_cint(cint_sheet *sheet, uint64_t *seed, cint *nums, char *comment, const int factors_needed, const int bits_needed) {
 // Produces a random composite number based on the seed, number of bits, and factors.
 // Fill in the comment if the resulting number intentionally contains a power, empty it otherwise.
 	begin :;
@@ -237,7 +237,7 @@ void generateInputFile(state *state) {
 			// DEVELOPMENT : decrease 24 and 17 in the next line to test the trial division.
 			const int n_factors_max = (int)bits / (65.0 <= bits ? 24 : 34.0 <= bits ? 17 : 3);
 			const int n_factors = xorRandint(&seed, 2, xorRandint(&seed, 2, n_factors_max));
-			random(sheet, &seed, nums, comment, n_factors, bits);
+			rand_cint(sheet, &seed, nums, comment, n_factors, bits);
 			cint_to_string_buffer(nums, buf, 10);
 			fprintf(fp, "%-*s # %d bits with %d factors%s\n", max_len, buf, (int) bits, n_factors, comment);
 			fflush(fp);
