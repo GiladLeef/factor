@@ -206,6 +206,7 @@ typedef struct {
 			uint32 primeIndex;
 			uint64 primeSquared;
 			uint32 kNModPrimeSquared;
+			uint32 bezout;
 		} *data;
 		struct {
 			uint32 defined;

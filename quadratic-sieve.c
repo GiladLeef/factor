@@ -568,6 +568,7 @@ void iterationPart2(QSSheet * qs, const cint * A, cint * B) {
 		intToCint(P_sq, qs->s.data[i].primeSquared);
 		cint_div(qs->sheet, kN, P_sq, Q, R_kN);
 		qs->s.data[i].kNModPrimeSquared = (uint32) cintToInt(R_kN);
+		qs->s.data[i].bezout = modularInverse(qs->base.data[idx].sqrtKNModPrime, prime);
 	}
 }
 
@@ -655,10 +656,7 @@ void iterationPart5(QSSheet *  qs, const cint * kN, const cint * B) {
 			s = (int64) cintToInt(Q);
 			if (Q->nat < 0) s = -s ;
 		}
-		//
-		int64 bezout = (rem_b % prime) * (int64) qs->s.data[a].aOverPrimeModPrime ;
-		bezout = (int64) modularInverse((uint32) (bezout % prime), (uint32) prime);
-		//
+		const int64 bezout = (int64) qs->s.data[a].bezout;
 		s = (int64) qs->m.lengthHalf - s * bezout ;
 		s %= prime ;
 		s += (s < 0) * prime ;
