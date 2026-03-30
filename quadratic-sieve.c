@@ -574,6 +574,11 @@ void iterationPart2(QSSheet * qs, const cint * A, cint * B) {
 void iterationPart3(QSSheet * qs, const cint * A, const cint * B) {
 	cint *Q = qs->vars.temp, *R = Q + 1, *PRIME = Q + 2;
 	uint64 i, j, x, y;
+	// Build a quick lookup for primes that divide A (these will have root[1] = -1 in iterationPart5)
+	uint8 *isAfactor = (uint8 *)qs->buffer[0];
+	memset(isAfactor, 0, qs->base.length);
+	for (j = 0; j < qs->s.values.defined; ++j)
+		isAfactor[qs->s.data[j].primeIndex] = 1;
 	for (i = 0; i < qs->base.length; ++i) {
 		// prepare the "roots" and "aInvDoubleValueBTerms". The algorithm will
 		// fill 2 ** (s - 3) sieves by using these values and adding "prime sizes".
@@ -597,11 +602,15 @@ void iterationPart3(QSSheet * qs, const cint * A, const cint * B) {
 		y %= prime ;
 		qs->base.data[i].root[0] = (uint32) x ; // First root of the polynomial mod prime.
 		qs->base.data[i].root[1] = (uint32) y ; // Second root of the polynomial mod prime.
-		for (j = 0; j < qs->s.values.defined; ++j) {
-			// compute the roots update value for all "s".
-			cint_div(qs->sheet, &qs->s.data[j].bTerms, PRIME, Q, R);
-			const uint64 b_term = cintToInt(R);
-			qs->s.data[j].aInvDoubleValueBTerms[i] = (uint32)(a_inv_doubleValue * b_term % prime);
+		// Skip computing aInvDoubleValueBTerms for primes that divide A - wasted work
+		// since iterationPart5 will set root[1] = -1 for these anyway
+		if (!isAfactor[i]) {
+			for (j = 0; j < qs->s.values.defined; ++j) {
+				// compute the roots update value for all "s".
+				cint_div(qs->sheet, &qs->s.data[j].bTerms, PRIME, Q, R);
+				const uint64 b_term = cintToInt(R);
+				qs->s.data[j].aInvDoubleValueBTerms[i] = (uint32)(a_inv_doubleValue * b_term % prime);
+			}
 		}
 	}
 	// The next function operates over "bTerms" multiplied by 2.
