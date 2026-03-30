@@ -561,6 +561,13 @@ void iterationPart2(QSSheet * qs, const cint * A, cint * B) {
 		cint_mul(A, X, Y);
 		cint_div(qs->sheet, Y, PRIME, &qs->s.data[i].bTerms, R), assert(R->mem == R->end); // div exact.
 		cint_addi(B, &qs->s.data[i].bTerms);
+		cint *kN = &qs->constants.kN;
+		cint *Q = qs->vars.temp;
+		cint *R_kN = qs->vars.temp + 1;
+		cint *P_sq = qs->vars.temp + 2;
+		intToCint(P_sq, qs->s.data[i].primeSquared);
+		cint_div(qs->sheet, kN, P_sq, Q, R_kN);
+		qs->s.data[i].kNModPrimeSquared = (uint32) cintToInt(R_kN);
 	}
 }
 
@@ -613,16 +620,16 @@ uint32 iterationPart4(const QSSheet * qs, const uint32 nth_curve, uint32 ** corr
 }
 
 void iterationPart5(QSSheet *  qs, const cint * kN, const cint * B) {
-	cint *P = qs->vars.temp, *Q = P + 1, *R_kN = P + 2, *R_B = P + 3, *TMP = P + 4;
+	cint *P = qs->vars.temp, *Q = P + 1, *R_B = P + 2, *TMP = P + 3;
 	for (uint32 a = 0; a < qs->s.values.defined; ++a) {
 		const uint32 i = qs->s.data[a].primeIndex;
 		const int64 prime = qs->base.data[i].num ;
 		intToCint(P, qs->s.data[a].primeSquared);
 		cint_div(qs->sheet, B, P, Q, R_B);
-		cint_div(qs->sheet, kN, P, Q, R_kN);
+		// Use precomputed kN mod prime^2 instead of redundant division
+		const int64 rem_kn = (int64) qs->s.data[a].kNModPrimeSquared;
 		if (B->nat < 0) cint_addi(R_B, P); // if B is negative.
 		const int64 rem_b = (int64) cintToInt(R_B);
-		const int64 rem_kn = (int64) cintToInt(R_kN);
 		int64 s ; // both remainders are modulo the prime number squared.
 		if (rem_b < 0xb504f334) {
 			// the multiplication is straightforward.
@@ -631,6 +638,8 @@ void iterationPart5(QSSheet *  qs, const cint * kN, const cint * B) {
 		} else {
 			// the common multiplication would overflow.
 			cint_mul(R_B, R_B, TMP);
+			cint *R_kN = qs->vars.temp + 4;
+			intToCint(R_kN, rem_kn);
 			cint_subi(TMP, R_kN);
 			intToCint(P, (uint64) prime);
 			cint_div(qs->sheet, TMP, P, Q, R_B);
